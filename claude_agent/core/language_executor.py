@@ -266,11 +266,19 @@ class LanguageExecutor:
             # Store server process for potential cleanup later
             self._web_server = server_process
             
-            # Give server time to start
-            time.sleep(1)
+            # Give server time to start and check if it's running
+            time.sleep(2)
+            
+            # Check if server is actually running
+            if server_process.poll() is not None:
+                # Process ended, something went wrong
+                stdout, stderr = server_process.communicate()
+                error_msg = f"Server failed to start: {stderr.decode('utf-8', errors='ignore')}"
+                return False, "", error_msg
             
             output = f"Web server started at http://localhost:{port}\n"
             output += f"Files served from: {web_dir}\n"
+            output += f"HTML file created at: {html_file}\n"
             
             # If we have ADB, set up port forwarding and launch browser
             if self.has_adb:
