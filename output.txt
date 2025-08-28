@@ -259,3 +259,116 @@ EXECUTION OUTPUT:
 ✓ HTML file created at: /tmp/web_1756411112/index.html
 ✓ Active servers: 1
 ✓ Browser launched on Android device
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Web Page</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        h1 {
+            font-size: 2.5em;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .content {
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+        .info {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Welcome to NetHunter</h1>
+    <div class="content">
+        <div class="info">
+            <h3>System Information</h3>
+            <p><strong>Time:</strong> <span id="time"></span></p>
+            <p><strong>Device:</strong> Android NetHunter Environment</p>
+            <p><strong>Status:</strong> Web server deployed successfully!</p>
+        </div>
+        
+        <div class="info">
+            <h3>Interactive Features</h3>
+            <button onclick="updateTime()">Update Time</button>
+            <button onclick="changeColor()">Change Theme</button>
+            <button onclick="showAlert()">Test Alert</button>
+        </div>
+        
+        <div class="info">
+            <h3>About This Page</h3>
+            <p>This simple web page was automatically generated and deployed from the NetHunter chroot environment. It demonstrates basic HTML, CSS, and JavaScript functionality served directly to your Android device.</p>
+        </div>
+    </div>
+
+    <script>
+        function updateTime() {
+            document.getElementById('time').textContent = new Date().toLocaleString();
+        }
+        
+        function changeColor() {
+            const colors = [
+                'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+                'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
+            ];
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            document.body.style.background = randomColor;
+        }
+        
+        function showAlert() {
+            alert('Hello from NetHunter web server! 🚀');
+        }
+        
+        // Initialize time on page load
+        updateTime();
+        
+        // Auto-update time every second
+        setInterval(updateTime, 1000);
+    </script>
+</body>
+</html>
+```
+
+============================================================
+EXECUTION OUTPUT:
+============================================================
+✓ Web server started at http://localhost:8271
+✓ Server PID: 22838
+✓ Files served from: /tmp/web_1756412187
+✓ HTML file created at: /tmp/web_1756412187/index.html
+✓ Active servers: 1
+✓ Browser launched on Android device
