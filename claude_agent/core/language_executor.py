@@ -183,9 +183,9 @@ class LanguageExecutor:
             if 'device' not in devices_result.stdout:
                 return False, "", "No ADB device connected"
             
-            # Execute via adb shell
+            # Execute via adb shell (bypass shell initialization)
             result = subprocess.run(
-                ['adb', 'shell', code],
+                ['adb', 'shell', 'env', '-i', 'sh', '-c', code],
                 capture_output=True,
                 text=True,
                 timeout=self.timeout
