@@ -7,10 +7,19 @@
 /*
  * C wrapper that completely bypasses shell initialization
  * This CANNOT load .zshrc because it uses execv() directly
+ * Compiled for ARM64 architecture on NetHunter
  */
 
 int main(int argc, char *argv[]) {
-    fprintf(stderr, "🔍 C WRAPPER: Starting with %d args\n", argc);
+    // Handle --help option for testing
+    if (argc > 1 && strcmp(argv[1], "--help") == 0) {
+        printf("Mobile Agent C Wrapper (ARM64)\n");
+        printf("Prevents .zshrc loading by using execve() directly\n");
+        printf("Usage: %s <agent-request>\n", argv[0]);
+        return 0;
+    }
+    
+    fprintf(stderr, "🔍 C WRAPPER (ARM64): Starting with %d args\n", argc);
     
     // Prepare arguments for the real agent
     char *agent_args[argc + 2];
