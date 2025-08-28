@@ -83,19 +83,21 @@ def run_agent_request(venv_python, request):
         print(f"Debug: Agent dir: {AGENT_DIR}", file=sys.stderr)
         print(f"Debug: Venv Python: {venv_python}", file=sys.stderr)
     
-    # Set up minimal environment with PYTHONPATH, avoiding shell-related vars
+    # Set up absolutely minimal environment - no shell variables at all
+    # Only include what's absolutely necessary for Python to run
     env = {
         'PYTHONPATH': str(AGENT_DIR),
-        'PATH': os.environ.get('PATH', '/usr/bin:/bin:/usr/local/bin'),
-        'HOME': os.environ.get('HOME', ''),
-        'USER': os.environ.get('USER', ''),
-        'LANG': os.environ.get('LANG', 'en_US.UTF-8'),
-        'LC_ALL': os.environ.get('LC_ALL', 'en_US.UTF-8'),
-        'PYTHONIOENCODING': 'utf-8'
+        'PATH': '/usr/bin:/bin:/usr/local/bin:/usr/sbin:/sbin',  # Fixed minimal PATH
+        'PYTHONIOENCODING': 'utf-8',
+        # Don't pass HOME, USER, or any shell-related vars
+        # This prevents any shell initialization files from being found
     }
     # Add AGENT_DEBUG if set
     if os.getenv('AGENT_DEBUG'):
         env['AGENT_DEBUG'] = os.getenv('AGENT_DEBUG')
+    # Add NETHUNTER_MODE if we're in NetHunter
+    if detect_environment() == 'nethunter':
+        env['NETHUNTER_MODE'] = '1'
     
     # Create a Python script to run in the venv
     script = f"""
