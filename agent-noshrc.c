@@ -33,31 +33,32 @@ int main(int argc, char *argv[]) {
     }
     agent_args[argc + 1] = NULL;
     
-    // Set up minimal environment
-    char *clean_env[] = {
-        "PATH=/usr/bin:/bin:/usr/local/bin:/sbin:/usr/sbin",
-        "PYTHONPATH=/root/.mobile-agent",
-        "PYTHONIOENCODING=utf-8",
-        "PYTHONNOUSERSITE=1", 
-        "PYTHONDONTWRITEBYTECODE=1",
-        NULL
-    };
-    
-    // Add debug flag if present in original environment
+    // Set up minimal environment with conditional debug flag
     char *debug_flag = getenv("AGENT_DEBUG_SUBPROCESS");
+    char **clean_env;
+    
     if (debug_flag && strcmp(debug_flag, "1") == 0) {
         fprintf(stderr, "🔍 C WRAPPER: Adding debug flag\n");
-        // Extend clean_env array to include debug flag
         static char *clean_env_debug[] = {
             "PATH=/usr/bin:/bin:/usr/local/bin:/sbin:/usr/sbin",
-            "PYTHONPATH=/root/.mobile-agent", 
-            "PYTHONIOENCODING=utf-8",
+            "PYTHONPATH=/root/.mobile-agent",
+            "PYTHONIOENCODING=utf-8", 
             "PYTHONNOUSERSITE=1",
             "PYTHONDONTWRITEBYTECODE=1",
             "AGENT_DEBUG_SUBPROCESS=1",
             NULL
         };
         clean_env = clean_env_debug;
+    } else {
+        static char *clean_env_normal[] = {
+            "PATH=/usr/bin:/bin:/usr/local/bin:/sbin:/usr/sbin",
+            "PYTHONPATH=/root/.mobile-agent",
+            "PYTHONIOENCODING=utf-8",
+            "PYTHONNOUSERSITE=1",
+            "PYTHONDONTWRITEBYTECODE=1", 
+            NULL
+        };
+        clean_env = clean_env_normal;
     }
     
     fprintf(stderr, "🔍 C WRAPPER: Executing with clean environment\n");
