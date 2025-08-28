@@ -223,7 +223,7 @@ class LanguageExecutor:
             escaped_code = code.replace("'", "'\\''")
             
             result = subprocess.run(
-                ['adb', 'shell', 'su', '-c', f"'{escaped_code}'"],
+                ['adb', 'shell', 'env', '-i', 'su', '-c', f"sh -c '{escaped_code}'"],
                 capture_output=True,
                 text=True,
                 timeout=self.timeout
