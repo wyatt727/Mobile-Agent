@@ -210,11 +210,17 @@ def validate_environment() -> Dict[str, bool]:
     
     # Check pip
     try:
+        clean_env = {
+            'PATH': '/usr/bin:/bin:/usr/local/bin:/usr/sbin:/sbin',
+            'LC_ALL': 'C',
+            'PYTHONPATH': '',
+        }
         result = subprocess.run(
             [sys.executable, "-m", "pip", "--version"],
             capture_output=True,
             text=True,
-            timeout=5
+            timeout=5,
+            env=clean_env
         )
         checks['pip'] = result.returncode == 0
     except:
