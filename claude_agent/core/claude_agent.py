@@ -51,14 +51,8 @@ class ClaudeAgent:
         
         # Initialize components
         self.llm = llm_provider or self._create_llm_provider()
-        self.executor = code_executor or CodeExecutor(
-            timeout=self.config.execution_timeout,
-            track_dependencies=self.config.track_dependencies,
-            auto_install_packages=self.config.auto_install_packages,
-            save_executed_code=self.config.save_code_files,
-            generated_code_dir=self.config.generated_code_dir,
-            nethunter_mode=self.config.nethunter_mode,
-            adb_path=self.config.adb_path
+        self.executor = language_executor or LanguageExecutor(
+            timeout=self.config.execution_timeout
         )
         # IMPORTANT: No persistence for stateless agent!
         # Each command should be independent with no memory
