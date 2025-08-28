@@ -150,9 +150,29 @@ class ClaudeCodeProvider(LLMProvider):
     def _call_claude_cli(self, prompt: str) -> str:
         """Call Claude CLI with the prompt."""
         try:
-            # If system prompt file is available, prepend the instruction
+            # Check if this is a web-related request
+            web_keywords = ['website', 'web', 'html', 'css', 'game', 'snake', 'canvas', 
+                          'javascript', 'site', 'webpage', 'html5', 'deploy', 'server', 
+                          'localhost', 'react', 'vue', 'portfolio', 'blog']
+            prompt_lower = prompt.lower()
+            is_web_request = any(keyword in prompt_lower for keyword in web_keywords)
+            
+            # Build the prompt with appropriate system prompts
             if self.system_prompt_file:
-                full_prompt = f"strictly follow your role and instructions within @{self.system_prompt_file} and: {prompt}"
+                if is_web_request:
+                    # Check if WebDev_Claude.md exists in the same directory
+                    from pathlib import Path
+                    prompt_dir = Path(self.system_prompt_file).parent
+                    webdev_prompt = prompt_dir / 'WebDev_Claude.md'
+                    
+                    if webdev_prompt.exists():
+                        # Include both prompts for web requests
+                        full_prompt = f"strictly follow your role and instructions within @{self.system_prompt_file} and @{webdev_prompt} and: {prompt}"
+                        logger.info("Including WebDev_Claude.md for web-related request")
+                    else:
+                        full_prompt = f"strictly follow your role and instructions within @{self.system_prompt_file} and: {prompt}"
+                else:
+                    full_prompt = f"strictly follow your role and instructions within @{self.system_prompt_file} and: {prompt}"
             else:
                 full_prompt = prompt
             
