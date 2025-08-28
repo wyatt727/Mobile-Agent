@@ -163,7 +163,7 @@ def validate_environment() -> Dict[str, bool]:
     checks['python_version'] = sys.version_info >= (3, 8)
     
     # Check Claude CLI (try custom path first, then fallback to PATH)
-    claude_paths = ["/Users/pentester/.claude/local/claude", "claude"]
+    claude_paths = ["/usr/local/bin/claude", "claude"]
     checks['claude_cli'] = False
     
     for claude_path in claude_paths:
