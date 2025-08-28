@@ -1,12 +1,33 @@
 # Makefile for Mobile-Agent shell bypass wrappers
+# Optimized for ARM64 NetHunter environment
+
+# Detect architecture
+ARCH := $(shell uname -m)
+TARGET_ARCH := aarch64
+
+# Compiler selection based on architecture
+ifeq ($(ARCH),aarch64)
+    CC := gcc
+    CFLAGS := -O2 -march=armv8-a
+else ifeq ($(ARCH),arm64)
+    CC := gcc  
+    CFLAGS := -O2 -march=armv8-a
+else
+    CC := aarch64-linux-gnu-gcc
+    CFLAGS := -static -O2
+endif
 
 # Default target
 all: agent-noshrc
 
-# C wrapper compilation with multiple fallbacks
+# ARM64-optimized C wrapper compilation
 agent-noshrc: agent-noshrc.c
-	@echo "🔧 Compiling C wrapper..."
-	@if gcc -o agent-noshrc agent-noshrc.c 2>/dev/null; then \
+	@echo "🔧 Compiling ARM64 C wrapper..."
+	@echo "   Architecture: $(ARCH)"
+	@echo "   Using compiler: $(CC)"
+	@if $(CC) $(CFLAGS) -o agent-noshrc agent-noshrc.c 2>/dev/null; then \
+		echo "✅ ARM64-optimized compilation succeeded"; \
+	elif gcc -o agent-noshrc agent-noshrc.c 2>/dev/null; then \
 		echo "✅ Standard gcc compilation succeeded"; \
 	elif gcc -static -o agent-noshrc agent-noshrc.c 2>/dev/null; then \
 		echo "✅ Static linking compilation succeeded"; \
@@ -19,6 +40,12 @@ agent-noshrc: agent-noshrc.c
 		exit 1; \
 	fi
 	@chmod +x agent-noshrc
+	@echo "🔍 Testing compiled binary..."
+	@if ./agent-noshrc --help >/dev/null 2>&1; then \
+		echo "✅ ARM64 binary executes correctly"; \
+	else \
+		echo "⚠️  Binary may not be native ARM64"; \
+	fi
 
 # Clean build artifacts
 clean:
