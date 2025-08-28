@@ -183,9 +183,9 @@ class LanguageExecutor:
             if 'device' not in devices_result.stdout:
                 return False, "", "No ADB device connected"
             
-            # Execute via adb shell using system sh (bypass user shell config)
+            # Execute via adb shell
             result = subprocess.run(
-                ['adb', 'shell', '/system/bin/sh', '-c', code],
+                ['adb', 'shell', code],
                 capture_output=True,
                 text=True,
                 timeout=self.timeout
@@ -223,7 +223,7 @@ class LanguageExecutor:
             escaped_code = code.replace("'", "'\\''")
             
             result = subprocess.run(
-                ['adb', 'shell', 'su', '-c', f"/system/bin/sh -c '{escaped_code}'"],
+                ['adb', 'shell', 'su', '-c', f"sh -c '{escaped_code}'"],
                 capture_output=True,
                 text=True,
                 timeout=self.timeout
@@ -328,9 +328,9 @@ class LanguageExecutor:
                         timeout=5
                     )
                     
-                    # Launch browser on Android using system shell
+                    # Launch browser on Android
                     subprocess.run(
-                        ['adb', 'shell', '/system/bin/sh', '-c', 
+                        ['adb', 'shell', 
                          f'am start -a android.intent.action.VIEW -d http://localhost:{port}'],
                         capture_output=True,
                         timeout=5
