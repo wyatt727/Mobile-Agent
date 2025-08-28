@@ -62,9 +62,9 @@ class ClaudeAgent:
             auto_save=False  # Never save to disk
         )
         
-        # Compile regex patterns
+        # Compile regex patterns (includes hyphenated languages like android-root)
         self.code_block_pattern = re.compile(
-            r"```(?P<lang>\w+)?\s*\n(?P<code>.*?)```",
+            r"```(?P<lang>[\w-]+)?\s*\n(?P<code>.*?)```",
             re.DOTALL | re.IGNORECASE
         )
         
