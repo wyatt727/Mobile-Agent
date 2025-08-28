@@ -319,6 +319,7 @@ fi
 echo -e "\n${CYAN}Example commands:${NC}"
 case "$ENV_TYPE" in
     nethunter|android)
+        echo -e "  ${GREEN}agent create a basic web page${NC}     ${BLUE}# Try this first!${NC}"
         echo "  agent open whatsapp"
         echo "  agent take a screenshot"
         echo "  agent scan target.com"
