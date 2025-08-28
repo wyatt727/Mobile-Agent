@@ -190,11 +190,12 @@ touch "$VENV_DIR/.requirements_installed"
 
 # Make agent executable
 chmod +x "$WORKING_DIR/agent"
+chmod +x "$WORKING_DIR/agent-noshell"
 
-# Create symlink
+# Create symlink to shell-bypassing agent (prevents .zshrc loading)
 echo -e "\n${BLUE}[*]${NC} Creating symlink..."
-ln -sf "$WORKING_DIR/agent" "$BIN_DIR/agent"
-echo -e "${GREEN}[✓]${NC} Symlink created: ${CYAN}$BIN_DIR/agent${NC} → ${CYAN}$WORKING_DIR/agent${NC}"
+ln -sf "$WORKING_DIR/agent-noshell" "$BIN_DIR/agent"
+echo -e "${GREEN}[✓]${NC} Symlink created: ${CYAN}$BIN_DIR/agent${NC} → ${CYAN}$WORKING_DIR/agent-noshell${NC} (shell-bypass version)"
 
 # Update PATH if needed
 if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
