@@ -38,7 +38,7 @@ class ClaudeCodeProvider(LLMProvider):
         timeout: int = 120,
         retry_on_rate_limit: bool = True,
         max_retries: int = 3,
-        claude_path: str = "/Users/pentester/.claude/local/claude",
+        claude_path: str = "/usr/local/bin/claude",
         system_prompt_file: Optional[str] = None
     ):
         """
