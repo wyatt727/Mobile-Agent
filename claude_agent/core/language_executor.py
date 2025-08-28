@@ -254,8 +254,20 @@ class LanguageExecutor:
             html_file = web_dir / "index.html"
             html_file.write_text(code)
             
-            # Find available port
-            port = random.randint(8080, 9000)
+            # Find a truly available port
+            def find_free_port():
+                for _ in range(10):
+                    port = random.randint(8080, 9000)
+                    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                        try:
+                            s.bind(('', port))
+                            s.close()
+                            return port
+                        except:
+                            continue
+                return 8080  # Fallback
+            
+            port = find_free_port()
             
             # Start web server in background using subprocess.Popen for proper async
             server_process = subprocess.Popen(
