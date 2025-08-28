@@ -109,6 +109,28 @@ if [ "$COPY_FILES" = true ] && [ "$SOURCE_DIR" != "$INSTALL_BASE" ]; then
     }
     echo -e "${GREEN}[✓]${NC} Files copied to $INSTALL_BASE"
     
+    # Verify critical files are not corrupted
+    echo -e "${BLUE}[*]${NC} Verifying file integrity..."
+    if [ -f "$INSTALL_BASE/agent" ]; then
+        # Check for null bytes in Python agent file
+        if grep -q $'\x00' "$INSTALL_BASE/agent" 2>/dev/null; then
+            echo -e "${YELLOW}[*]${NC} Detected corruption in agent file, fixing..."
+            # Remove corrupted file and recopy from source
+            rm -f "$INSTALL_BASE/agent"
+            cp "$SOURCE_DIR/agent" "$INSTALL_BASE/agent"
+            chmod +x "$INSTALL_BASE/agent"
+        fi
+        
+        # Test Python syntax
+        if ! python3 -m py_compile "$INSTALL_BASE/agent" 2>/dev/null; then
+            echo -e "${YELLOW}[*]${NC} Python agent file corrupted, restoring from source..."
+            rm -f "$INSTALL_BASE/agent"
+            cp "$SOURCE_DIR/agent" "$INSTALL_BASE/agent" 
+            chmod +x "$INSTALL_BASE/agent"
+        fi
+    fi
+    echo -e "${GREEN}[✓]${NC} File integrity verified"
+    
     # Now work from installation directory
     WORKING_DIR="$INSTALL_BASE"
 else
