@@ -290,8 +290,9 @@ class LanguageExecutor:
             output += f"✓ HTML file created at: {html_file}\n"
             output += f"✓ Active servers: {len(LanguageExecutor._active_servers)}\n"
             
-            # If we have ADB, set up port forwarding and launch browser
-            if self.has_adb:
+            # Try to launch browser
+            if self.has_adb and self.is_nethunter:
+                # NetHunter environment - launch on Android
                 try:
                     # Set up port forwarding
                     subprocess.run(
@@ -308,10 +309,18 @@ class LanguageExecutor:
                         timeout=5
                     )
                     
-                    output += f"Browser launched on Android device\n"
+                    output += f"✓ Browser launched on Android device\n"
                     
                 except Exception as e:
-                    output += f"Could not launch browser: {e}\n"
+                    output += f"⚠ Could not launch Android browser: {e}\n"
+            else:
+                # MacOS/Linux environment - open locally
+                try:
+                    import webbrowser
+                    webbrowser.open(f'http://localhost:{port}')
+                    output += f"✓ Browser launched locally\n"
+                except Exception as e:
+                    output += f"⚠ Could not launch local browser: {e}\n"
             
             return True, output, ""
             
