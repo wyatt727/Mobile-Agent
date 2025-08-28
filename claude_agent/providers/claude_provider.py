@@ -201,12 +201,18 @@ class ClaudeCodeProvider(LLMProvider):
             
             logger.debug(f"Executing Claude CLI (model: {self.model})")
             
-            # Execute command without shell=True to avoid loading .zshrc
+            # Execute command with clean environment to avoid loading .zshrc
+            clean_env = {
+                'PATH': '/usr/bin:/bin:/usr/local/bin:/usr/sbin:/sbin',
+                'LC_ALL': 'C',
+            }
+            
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=self.timeout
+                timeout=self.timeout,
+                env=clean_env
             )
             
             if result.returncode == 0:
