@@ -1,0 +1,66 @@
+#!/usr/bin/env -S python3 -E -s
+"""
+Direct agent launcher - bypasses ALL shell and environment loading
+The -E flag ignores all PYTHON* environment variables
+The -s flag doesn't add user site directory to sys.path
+"""
+import os
+import sys
+import subprocess
+from pathlib import Path
+
+# Force minimal environment
+os.environ.clear()
+os.environ.update({
+    'PATH': '/usr/bin:/bin:/usr/local/bin',
+    'PYTHONPATH': str(Path(__file__).parent),
+    'PYTHONIOENCODING': 'utf-8',
+})
+
+# Get agent directory
+AGENT_DIR = Path(__file__).parent
+sys.path.insert(0, str(AGENT_DIR))
+
+# Import and run directly without subprocess
+from claude_agent.config import AgentConfig
+from claude_agent.core.claude_agent import ClaudeAgent
+
+if len(sys.argv) < 2:
+    print("Usage: agent-direct <request>")
+    sys.exit(1)
+
+request = " ".join(sys.argv[1:])
+
+try:
+    # Configure agent
+    config = AgentConfig()
+    
+    # Detect environment
+    if Path('/etc/nethunter').exists() or Path('/data/local/nhsystem').exists():
+        prompt_file = AGENT_DIR / "claude_agent" / "prompt" / "nethunter-system-prompt-v3.md"
+    else:
+        prompt_file = AGENT_DIR / "system-prompt.txt"
+    
+    if prompt_file.exists():
+        config.claude_system_prompt_file = str(prompt_file)
+    
+    config.verbose = False
+    config.agent_dir = str(AGENT_DIR)
+    
+    # Initialize and run
+    agent = ClaudeAgent(config=config)
+    response, results = agent.process_request(request)
+    
+    # Output results
+    if response:
+        print(response)
+    
+    for result in results:
+        if result.output:
+            print(result.output, end='' if result.output.endswith('\n') else '\n')
+        if not result.success and result.error:
+            print(f"Error: {result.error}", file=sys.stderr)
+            
+except Exception as e:
+    print(f"Error: {e}", file=sys.stderr)
+    sys.exit(1)
