@@ -220,7 +220,11 @@ class PromptLoader:
             # Check ADB status
             import subprocess
             try:
-                result = subprocess.run(['adb', 'devices'], capture_output=True, text=True, timeout=2)
+                clean_env = {
+                    'PATH': '/usr/bin:/bin:/usr/local/bin:/usr/sbin:/sbin',
+                    'LC_ALL': 'C',
+                }
+                result = subprocess.run(['adb', 'devices'], capture_output=True, text=True, timeout=2, env=clean_env)
                 if 'device' in result.stdout:
                     context.append("- ADB device connected")
             except:
