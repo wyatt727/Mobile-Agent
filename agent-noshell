@@ -1,5 +1,5 @@
-#!/bin/bash
-# Shell wrapper that prevents .zshrc loading by using clean environment
+#!/bin/sh
+# Shell wrapper that prevents .zshrc loading by using /bin/sh (never loads .zshrc)
 
 # Debug what we received
 echo "🔍 NOSHELL WRAPPER DEBUG:" >&2
