@@ -34,7 +34,7 @@ class ClaudeAgent:
         self,
         config: Optional[AgentConfig] = None,
         llm_provider: Optional[LLMProvider] = None,
-        code_executor: Optional[CodeExecutor] = None,
+        language_executor: Optional[LanguageExecutor] = None,
         conversation_manager: Optional[ConversationManager] = None
     ):
         """
