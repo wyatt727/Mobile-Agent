@@ -165,28 +165,24 @@ class ClaudeCodeProvider(LLMProvider):
             else:
                 full_prompt = prompt
             
-            # Escape the prompt for shell
-            escaped_prompt = self._escape_for_shell(full_prompt)
-            
-            # Build command as a shell string to ensure proper handling
-            cmd_parts = [
+            # Build command as a list to avoid shell initialization
+            cmd = [
                 self.claude_path,
                 "--print"
             ]
             
             # Add model if specified
             if self.model:
-                cmd_parts.extend(["--model", self.model])
+                cmd.extend(["--model", self.model])
             
-            # Build the full command with the prompt in single quotes
-            cmd_str = " ".join(cmd_parts) + f" '{escaped_prompt}'"
+            # Add the prompt as the last argument
+            cmd.append(full_prompt)
             
             logger.debug(f"Executing Claude CLI (model: {self.model})")
             
-            # Execute command using shell=True to properly handle the quoted prompt
+            # Execute command without shell=True to avoid loading .zshrc
             result = subprocess.run(
-                cmd_str,
-                shell=True,
+                cmd,
                 capture_output=True,
                 text=True,
                 timeout=self.timeout
