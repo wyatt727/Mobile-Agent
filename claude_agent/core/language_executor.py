@@ -269,19 +269,18 @@ class LanguageExecutor:
             
             port = find_free_port()
             
-            # Start web server completely detached to survive parent exit
+            # Start web server detached to survive parent exit
             log_file = web_dir / 'server.log'
             
-            # Start server without nohup to avoid shell invocation
-            # Use setsid for proper detachment instead
-            server_process = subprocess.Popen(
-                ['python3', '-m', 'http.server', str(port)],
-                cwd=str(web_dir),
-                stdout=open(log_file, 'w'),
-                stderr=subprocess.STDOUT,
-                start_new_session=True,  # Creates new session (setsid equivalent)
-                preexec_fn=os.setpgrp  # Fully detach from parent process group
-            )
+            # Start server process independently
+            with open(log_file, 'w') as log:
+                server_process = subprocess.Popen(
+                    ['python3', '-m', 'http.server', str(port)],
+                    cwd=str(web_dir),
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
+                    start_new_session=True  # Creates new session for independence
+                )
             
             # Store server process to keep it alive
             LanguageExecutor._active_servers.append({
