@@ -174,11 +174,16 @@ def validate_environment() -> Dict[str, bool]:
                 if not Path(claude_path).exists():
                     continue
             
+            clean_env = {
+                'PATH': '/usr/bin:/bin:/usr/local/bin:/usr/sbin:/sbin',
+                'LC_ALL': 'C',
+            }
             result = subprocess.run(
                 [claude_path, "--version"],
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=5,
+                env=clean_env
             )
             if result.returncode == 0:
                 checks['claude_cli'] = True
