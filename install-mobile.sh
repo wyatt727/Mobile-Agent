@@ -259,8 +259,10 @@ if command -v gcc >/dev/null 2>&1; then
             BYPASS_AGENT="$WORKING_DIR/agent-noshrc" 
             echo -e "${GREEN}[✓]${NC} C wrapper compiled with gcc (complete shell bypass)"
         fi
+    fi
+    
     # Try static linking as last resort
-    elif gcc -static -o agent-noshrc agent-noshrc.c 2>/dev/null; then
+    if [ -z "$BYPASS_AGENT" ] && gcc -static -o agent-noshrc agent-noshrc.c 2>/dev/null; then
         chmod +x agent-noshrc
         if ./agent-noshrc --help >/dev/null 2>&1; then
             BYPASS_AGENT="$WORKING_DIR/agent-noshrc"
