@@ -228,6 +228,7 @@ class ClaudeAgent:
                 success=success,
                 output=stdout,
                 error=stderr,
+                return_code=0 if success else 1,  # Default return codes
                 language=language,
                 execution_time=0.0  # LanguageExecutor doesn't track time
             )
