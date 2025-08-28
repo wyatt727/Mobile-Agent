@@ -42,7 +42,7 @@ class InvocationManager:
         # Patterns that trigger specific instruction loading
         self.task_patterns = {
             'webdev': ['website', 'web page', 'html', 'css', 'react', 'blog', 'portfolio', 
-                      'web', 'game', 'snake', 'canvas', 'javascript', 'site', 'webpage',
+                      'web', 'game', 'canvas', 'javascript', 'site', 'webpage',
                       'html5', 'deploy', 'server', 'localhost'],
             'security': ['scan', 'nmap', 'exploit', 'vulnerability', 'pentest', 'hack'],
             'android': ['app', 'apk', 'install', 'package', 'activity'],
