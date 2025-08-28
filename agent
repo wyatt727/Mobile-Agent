@@ -11,8 +11,52 @@ from pathlib import Path
 
 # Enable subprocess debugging if AGENT_DEBUG_SUBPROCESS is set
 if os.environ.get('AGENT_DEBUG_SUBPROCESS') == '1':
-    sys.path.insert(0, str(Path(__file__).parent))
-    import debug_subprocess  # This monkey-patches subprocess for debugging
+    import traceback
+    
+    # Store original subprocess functions
+    _original_run = subprocess.run
+    _original_Popen = subprocess.Popen
+    
+    def log_subprocess(func_name, args, kwargs):
+        """Log subprocess call details"""
+        print(f"\n🔍 SUBPROCESS CALL: {func_name}", file=sys.stderr)
+        print(f"   Command: {args[0] if args else 'None'}", file=sys.stderr)
+        
+        # Check environment
+        env = kwargs.get('env')
+        if env is None:
+            print(f"   Environment: INHERITED (DANGEROUS!)", file=sys.stderr)
+            print(f"   SHELL in os.environ: {os.environ.get('SHELL', 'Not set')}", file=sys.stderr)
+            print(f"   HOME in os.environ: {os.environ.get('HOME', 'Not set')}", file=sys.stderr)
+            print(f"   ⚠️  This call will inherit your shell environment!", file=sys.stderr)
+        else:
+            print(f"   Environment: CLEAN ({len(env)} vars)", file=sys.stderr)
+            shell_vars = ['SHELL', 'HOME', 'ZSH', 'BASH', 'ENV', 'BASH_ENV']
+            for var in shell_vars:
+                if var in env:
+                    print(f"   ⚠️  {var} in clean env: {env[var]}", file=sys.stderr)
+        
+        # Print call stack
+        stack = traceback.extract_stack()
+        print(f"   Call stack:", file=sys.stderr)
+        for frame in stack[-4:-1]:
+            print(f"     {frame.filename}:{frame.lineno} in {frame.name}", file=sys.stderr)
+        print(f"   {'='*60}", file=sys.stderr)
+
+    def debug_run(*args, **kwargs):
+        log_subprocess('subprocess.run', args, kwargs)
+        return _original_run(*args, **kwargs)
+
+    def debug_Popen(*args, **kwargs):
+        log_subprocess('subprocess.Popen', args, kwargs)
+        return _original_Popen(*args, **kwargs)
+
+    # Monkey patch subprocess
+    subprocess.run = debug_run
+    subprocess.Popen = debug_Popen
+    
+    print("🔍 Subprocess debugging enabled inline!", file=sys.stderr)
+    print(f"🔍 Current SHELL: {os.environ.get('SHELL', 'Not set')}", file=sys.stderr)
 
 # Determine the agent installation directory (resolve symlinks)
 AGENT_DIR = Path(__file__).resolve().parent
