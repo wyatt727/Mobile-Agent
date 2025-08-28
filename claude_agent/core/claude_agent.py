@@ -222,7 +222,15 @@ class ClaudeAgent:
         
         for attempt in range(max_attempts):
             # Execute code
-            result = self.executor.execute(current_code, language)
+            # Execute code and create ExecutionResult
+            success, stdout, stderr = self.executor.execute(current_code, language)
+            result = ExecutionResult(
+                success=success,
+                output=stdout,
+                error=stderr,
+                language=language,
+                execution_time=0.0  # LanguageExecutor doesn't track time
+            )
             last_result = result
             
             # Return if successful
