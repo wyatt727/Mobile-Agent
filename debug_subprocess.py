@@ -25,18 +25,27 @@ def log_subprocess(func_name, args, kwargs):
     if env is None:
         print(f"   Environment: INHERITED (DANGEROUS!)", file=sys.stderr)
         print(f"   SHELL in os.environ: {os.environ.get('SHELL', 'Not set')}", file=sys.stderr)
+        print(f"   HOME in os.environ: {os.environ.get('HOME', 'Not set')}", file=sys.stderr)
+        # This is likely the culprit!
+        print(f"   ⚠️  This call will inherit your shell environment!", file=sys.stderr)
     else:
         print(f"   Environment: CLEAN ({len(env)} vars)", file=sys.stderr)
-        if 'SHELL' in env:
-            print(f"   SHELL in clean env: {env['SHELL']}", file=sys.stderr)
+        shell_vars = ['SHELL', 'HOME', 'ZSH', 'BASH', 'ENV', 'BASH_ENV']
+        for var in shell_vars:
+            if var in env:
+                print(f"   ⚠️  {var} in clean env: {env[var]}", file=sys.stderr)
+        
+        # Show all environment variables in clean env
+        if len(env) < 10:  # Only if not too many
+            print(f"   Clean env contents: {dict(env)}", file=sys.stderr)
     
     # Print call stack
     stack = traceback.extract_stack()
     print(f"   Call stack:", file=sys.stderr)
-    for frame in stack[-4:-1]:  # Show last few frames
+    for frame in stack[-5:-1]:  # Show more frames
         print(f"     {frame.filename}:{frame.lineno} in {frame.name}", file=sys.stderr)
     
-    print(f"   {'='*50}", file=sys.stderr)
+    print(f"   {'='*60}", file=sys.stderr)
 
 def debug_run(*args, **kwargs):
     log_subprocess('subprocess.run', args, kwargs)
