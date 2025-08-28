@@ -193,11 +193,16 @@ def validate_environment() -> Dict[str, bool]:
     
     # Check Node.js (for JavaScript execution)
     try:
+        clean_env = {
+            'PATH': '/usr/bin:/bin:/usr/local/bin:/usr/sbin:/sbin',
+            'LC_ALL': 'C',
+        }
         result = subprocess.run(
             ["node", "--version"],
             capture_output=True,
             text=True,
-            timeout=5
+            timeout=5,
+            env=clean_env
         )
         checks['nodejs'] = result.returncode == 0
     except:
