@@ -299,7 +299,8 @@ class RequestProcessor:
             # Map special language identifiers
             if language == 'adb':
                 # Wrap in adb shell using system sh to bypass shell config
-                code = f"adb shell /system/bin/sh -c '{code.replace(\"'\", \"'\\\\'\")}'")
+                escaped_code = code.replace("'", "'\\\\''")
+                code = f"adb shell /system/bin/sh -c '{escaped_code}'"
                 language = 'shell'
             elif language == 'host':
                 # Wrap in adb shell su using system sh to bypass shell config
