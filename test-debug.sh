@@ -8,4 +8,4 @@ echo ""
 
 # Enable debugging and run a simple command
 export AGENT_DEBUG_SUBPROCESS=1
-./agent "create a simple html page"
+/usr/local/bin/agent "create a simple html page"
