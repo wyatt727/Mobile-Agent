@@ -4,17 +4,15 @@ Claude Agent CLI - Execute commands naturally using AI
 Usage: agent <request>
 Example: agent open calculator
 """
-
-# Enable subprocess debugging if AGENT_DEBUG_SUBPROCESS is set
-if os.environ.get('AGENT_DEBUG_SUBPROCESS') == '1':
-    import sys
-    sys.path.insert(0, str(Path(__file__).parent))
-    import debug_subprocess
-
 import os
 import sys
 import subprocess
 from pathlib import Path
+
+# Enable subprocess debugging if AGENT_DEBUG_SUBPROCESS is set
+if os.environ.get('AGENT_DEBUG_SUBPROCESS') == '1':
+    sys.path.insert(0, str(Path(__file__).parent))
+    import debug_subprocess  # This monkey-patches subprocess for debugging
 
 # Determine the agent installation directory (resolve symlinks)
 AGENT_DIR = Path(__file__).resolve().parent
