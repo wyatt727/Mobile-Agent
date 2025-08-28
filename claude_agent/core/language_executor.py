@@ -269,13 +269,17 @@ class LanguageExecutor:
             
             port = find_free_port()
             
-            # Start web server in background using subprocess.Popen for proper async
+            # Start web server completely detached using nohup to survive parent exit
+            log_file = web_dir / 'server.log'
+            
+            # Use nohup to completely detach the server process
             server_process = subprocess.Popen(
-                ['python3', '-m', 'http.server', str(port)],
+                ['nohup', 'python3', '-m', 'http.server', str(port)],
                 cwd=str(web_dir),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                start_new_session=True
+                stdout=open(log_file, 'w'),
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+                preexec_fn=os.setpgrp  # Fully detach from parent process group
             )
             
             # Store server process to keep it alive
@@ -286,8 +290,19 @@ class LanguageExecutor:
                 'pid': server_process.pid
             })
             
-            # Give server time to start and check if it's running
-            time.sleep(2)
+            # Give server time to start and verify it's accessible
+            time.sleep(1)
+            
+            # Verify server is actually serving
+            import urllib.request
+            for _ in range(5):  # Try 5 times
+                try:
+                    with urllib.request.urlopen(f'http://localhost:{port}', timeout=1) as response:
+                        if response.status == 200:
+                            break
+                except:
+                    time.sleep(0.5)
+                    continue
             
             # Check if server is actually running
             if server_process.poll() is not None:
@@ -326,10 +341,24 @@ class LanguageExecutor:
                 except Exception as e:
                     output += f"⚠ Could not launch Android browser: {e}\n"
             else:
-                # MacOS/Linux environment - open locally
+                # MacOS/Linux environment - open locally without shell
                 try:
-                    import webbrowser
-                    webbrowser.open(f'http://localhost:{port}')
+                    import platform
+                    url = f'http://localhost:{port}'
+                    
+                    if platform.system() == 'Darwin':  # macOS
+                        # Use open command directly without shell
+                        subprocess.run(['open', url], check=False)
+                    elif platform.system() == 'Linux':
+                        # Try xdg-open first, then fallback
+                        try:
+                            subprocess.run(['xdg-open', url], check=False)
+                        except:
+                            subprocess.run(['firefox', url], check=False)
+                    else:
+                        # Windows fallback
+                        subprocess.run(['start', url], shell=True, check=False)
+                    
                     output += f"✓ Browser launched locally\n"
                 except Exception as e:
                     output += f"⚠ Could not launch local browser: {e}\n"
