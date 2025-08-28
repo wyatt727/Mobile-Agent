@@ -235,14 +235,23 @@ class CodeExecutor:
                     self.installed_packages.update(packages)
             
             try:
+                # Write code to a temp file and execute it to avoid shell initialization
+                import tempfile
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.sh', delete=False) as f:
+                    f.write(code)
+                    temp_script = f.name
+                
+                os.chmod(temp_script, 0o755)
+                
                 result = subprocess.run(
-                    code,
-                    shell=True,
+                    [shell, temp_script],
                     capture_output=True,
                     text=True,
-                    timeout=self.timeout,
-                    executable=shell
+                    timeout=self.timeout
                 )
+                
+                # Clean up temp file
+                os.unlink(temp_script)
                 
                 return ExecutionResult(
                     success=result.returncode == 0,
