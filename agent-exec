@@ -1,0 +1,35 @@
+#!/usr/bin/python3 -E -s
+"""
+Agent launcher using exec to replace process completely
+This prevents any shell from being involved
+"""
+import os
+import sys
+
+# Clear and set minimal environment
+new_env = {
+    'PATH': '/usr/bin:/bin:/usr/local/bin',
+    'PYTHONPATH': os.path.dirname(os.path.abspath(__file__)),
+    'PYTHONIOENCODING': 'utf-8',
+    'PYTHONDONTWRITEBYTECODE': '1',
+    'PYTHONNOUSERSITE': '1',
+}
+
+# Build command
+venv_python = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    '.claude_venv/bin/python'
+)
+
+if not os.path.exists(venv_python):
+    print("Virtual environment not found. Run ./install.sh first.")
+    sys.exit(1)
+
+# Build arguments for exec
+args = [venv_python, '-E', '-s', os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    'agent-direct'
+)] + sys.argv[1:]
+
+# Replace current process with Python - no subprocess, no shell
+os.execve(venv_python, args, new_env)
