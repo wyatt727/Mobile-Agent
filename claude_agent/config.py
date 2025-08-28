@@ -15,7 +15,7 @@ class AgentConfig:
     
     # Claude CLI settings
     claude_model: str = "sonnet"
-    claude_path: str = "/Users/pentester/.claude/local/claude"
+    claude_path: str = "/usr/local/bin/claude"
     claude_system_prompt_file: str = "prompt/Nethunter_Claude.md"  # Path to system prompt file for Claude CLI
 
     # NetHunter specific settings
