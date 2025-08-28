@@ -195,7 +195,7 @@ class InvocationManager:
         tools = []
         for tool in ['nmap', 'msfconsole', 'airmon-ng', 'node', 'npm']:
             try:
-                result = subprocess.run(['which', tool], capture_output=True, timeout=1)
+                result = subprocess.run(['which', tool], capture_output=True, timeout=1, env=clean_env)
                 if result.returncode == 0:
                     tools.append(tool)
             except:
