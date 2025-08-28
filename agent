@@ -83,9 +83,19 @@ def run_agent_request(venv_python, request):
         print(f"Debug: Agent dir: {AGENT_DIR}", file=sys.stderr)
         print(f"Debug: Venv Python: {venv_python}", file=sys.stderr)
     
-    # Set up environment with PYTHONPATH
-    env = os.environ.copy()
-    env['PYTHONPATH'] = str(AGENT_DIR)
+    # Set up minimal environment with PYTHONPATH, avoiding shell-related vars
+    env = {
+        'PYTHONPATH': str(AGENT_DIR),
+        'PATH': os.environ.get('PATH', '/usr/bin:/bin:/usr/local/bin'),
+        'HOME': os.environ.get('HOME', ''),
+        'USER': os.environ.get('USER', ''),
+        'LANG': os.environ.get('LANG', 'en_US.UTF-8'),
+        'LC_ALL': os.environ.get('LC_ALL', 'en_US.UTF-8'),
+        'PYTHONIOENCODING': 'utf-8'
+    }
+    # Add AGENT_DEBUG if set
+    if os.getenv('AGENT_DEBUG'):
+        env['AGENT_DEBUG'] = os.getenv('AGENT_DEBUG')
     
     # Create a Python script to run in the venv
     script = f"""
