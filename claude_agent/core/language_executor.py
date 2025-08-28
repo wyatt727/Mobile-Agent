@@ -284,9 +284,11 @@ class LanguageExecutor:
                 error_msg = f"Server failed to start: {stderr.decode('utf-8', errors='ignore')}"
                 return False, "", error_msg
             
-            output = f"Web server started at http://localhost:{port}\n"
-            output += f"Files served from: {web_dir}\n"
-            output += f"HTML file created at: {html_file}\n"
+            output = f"✓ Web server started at http://localhost:{port}\n"
+            output += f"✓ Server PID: {server_process.pid}\n"
+            output += f"✓ Files served from: {web_dir}\n"
+            output += f"✓ HTML file created at: {html_file}\n"
+            output += f"✓ Active servers: {len(LanguageExecutor._active_servers)}\n"
             
             # If we have ADB, set up port forwarding and launch browser
             if self.has_adb:
