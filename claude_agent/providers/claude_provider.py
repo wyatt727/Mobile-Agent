@@ -147,15 +147,6 @@ class ClaudeCodeProvider(LLMProvider):
             return f"{context}\n\n---\n\n{prompt}"
         return prompt
     
-    def _escape_for_shell(self, text: str) -> str:
-        """Escape text for use in single-quoted shell strings.
-        
-        In bash, to include a single quote in a single-quoted string,
-        we need to end the quote, add an escaped single quote, and start a new quote.
-        Example: 'don't' becomes 'don'\''t'
-        """
-        return text.replace("'", "'\\''")
-    
     def _call_claude_cli(self, prompt: str) -> str:
         """Call Claude CLI with the prompt."""
         try:
