@@ -328,11 +328,10 @@ if __name__ == '__main__':
                 if reverse_result.returncode == 0:
                     logger.info(f"Port {port} forwarding established")
                     
-                    # Launch browser
+                    # Launch browser (bypass shell initialization)
                     launch_result = subprocess.run(
-                        ['adb', 'shell', 'am', 'start', '-a', 
-                         'android.intent.action.VIEW', '-d', 
-                         f'http://localhost:{port}'],
+                        ['adb', 'shell', 'env', '-i', 'sh', '-c',
+                         f'am start -a android.intent.action.VIEW -d http://localhost:{port}'],
                         capture_output=True,
                         text=True,
                         timeout=5
