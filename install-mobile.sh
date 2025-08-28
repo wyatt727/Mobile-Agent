@@ -192,35 +192,56 @@ touch "$VENV_DIR/.requirements_installed"
 chmod +x "$WORKING_DIR/agent"
 chmod +x "$WORKING_DIR/agent-noshell"
 
-# Try to find the best shell bypass method
-echo -e "\n${BLUE}[*]${NC} Finding best shell bypass method..."
+# Try to compile C wrapper for complete shell bypass (.zshrc prevention)
+echo -e "\n${BLUE}[*]${NC} Compiling shell bypass wrapper (prevents .zshrc loading)..."
 chmod +x "$WORKING_DIR/agent-noshell"
 chmod +x "$WORKING_DIR/agent-busybox" 2>/dev/null
 
-# Try C wrapper compilation
 BYPASS_AGENT=""
-if command -v gcc >/dev/null 2>&1 || command -v clang >/dev/null 2>&1 || command -v make >/dev/null 2>&1; then
+if command -v gcc >/dev/null 2>&1; then
     cd "$WORKING_DIR"
     
-    # Try make first
-    if make agent-noshrc >/dev/null 2>&1; then
-        BYPASS_AGENT="$WORKING_DIR/agent-noshrc"
-        echo -e "${GREEN}[✓]${NC} C wrapper compiled with make (complete shell bypass)"
-    # Try direct gcc compilation
+    echo -e "   ${BLUE}Attempting C wrapper compilation...${NC}"
+    
+    # Try ARM64-optimized compilation first
+    if gcc -march=armv8-a -O2 -o agent-noshrc agent-noshrc.c 2>/dev/null; then
+        chmod +x agent-noshrc
+        # Test if the compiled binary actually works
+        if ./agent-noshrc --help >/dev/null 2>&1; then
+            BYPASS_AGENT="$WORKING_DIR/agent-noshrc"
+            echo -e "${GREEN}[✓]${NC} ARM64-optimized C wrapper compiled and tested successfully"
+            echo -e "   ${GREEN}This completely prevents shell initialization${NC}"
+        fi
+    # Fallback to standard gcc
     elif gcc -o agent-noshrc agent-noshrc.c 2>/dev/null; then
         chmod +x agent-noshrc
-        BYPASS_AGENT="$WORKING_DIR/agent-noshrc" 
-        echo -e "${GREEN}[✓]${NC} C wrapper compiled with gcc (complete shell bypass)"
-    # Try static linking
+        if ./agent-noshrc --help >/dev/null 2>&1; then
+            BYPASS_AGENT="$WORKING_DIR/agent-noshrc" 
+            echo -e "${GREEN}[✓]${NC} C wrapper compiled with gcc (complete shell bypass)"
+        fi
+    # Try static linking as last resort
     elif gcc -static -o agent-noshrc agent-noshrc.c 2>/dev/null; then
         chmod +x agent-noshrc
-        BYPASS_AGENT="$WORKING_DIR/agent-noshrc"
-        echo -e "${GREEN}[✓]${NC} C wrapper compiled static (complete shell bypass)"
-    # Try clang
-    elif clang -o agent-noshrc agent-noshrc.c 2>/dev/null; then
+        if ./agent-noshrc --help >/dev/null 2>&1; then
+            BYPASS_AGENT="$WORKING_DIR/agent-noshrc"
+            echo -e "${GREEN}[✓]${NC} C wrapper compiled static (complete shell bypass)"
+        fi
+    fi
+    
+    # If compilation failed, show helpful message
+    if [ -z "$BYPASS_AGENT" ]; then
+        echo -e "${YELLOW}[*]${NC} C compilation failed - this may be due to architecture mismatch"
+        echo -e "   ${YELLOW}Consider running: apt install -y build-essential${NC}"
+    fi
+elif command -v clang >/dev/null 2>&1; then
+    cd "$WORKING_DIR"
+    echo -e "   ${BLUE}Trying clang compilation...${NC}"
+    if clang -o agent-noshrc agent-noshrc.c 2>/dev/null; then
         chmod +x agent-noshrc
-        BYPASS_AGENT="$WORKING_DIR/agent-noshrc"
-        echo -e "${GREEN}[✓]${NC} C wrapper compiled with clang (complete shell bypass)"
+        if ./agent-noshrc --help >/dev/null 2>&1; then
+            BYPASS_AGENT="$WORKING_DIR/agent-noshrc"
+            echo -e "${GREEN}[✓]${NC} C wrapper compiled with clang (complete shell bypass)"
+        fi
     fi
 fi
 
@@ -239,8 +260,18 @@ fi
 # Create symlink to best available shell-bypassing agent
 echo -e "\n${BLUE}[*]${NC} Creating symlink..."
 ln -sf "$BYPASS_AGENT" "$BIN_DIR/agent"
-echo -e "${GREEN}[✓]${NC} Symlink created: ${CYAN}$BIN_DIR/agent${NC} → ${CYAN}$BYPASS_AGENT${NC}"
-echo -e "   This prevents .zshrc loading and Termux auto-start"
+
+# Show which method is being used
+if [[ "$BYPASS_AGENT" == *"agent-noshrc"* ]]; then
+    echo -e "${GREEN}[✓]${NC} Symlink created: ${CYAN}$BIN_DIR/agent${NC} → ${CYAN}$BYPASS_AGENT${NC} ${GREEN}(C wrapper)${NC}"
+    echo -e "   ${GREEN}✓ Complete shell bypass - prevents .zshrc loading and Termux auto-start${NC}"
+elif [[ "$BYPASS_AGENT" == *"agent-busybox"* ]]; then
+    echo -e "${GREEN}[✓]${NC} Symlink created: ${CYAN}$BIN_DIR/agent${NC} → ${CYAN}$BYPASS_AGENT${NC} ${YELLOW}(busybox wrapper)${NC}"
+    echo -e "   ${GREEN}✓ Shell bypass using busybox - prevents .zshrc loading${NC}"
+else
+    echo -e "${GREEN}[✓]${NC} Symlink created: ${CYAN}$BIN_DIR/agent${NC} → ${CYAN}$BYPASS_AGENT${NC} ${YELLOW}(shell wrapper)${NC}"
+    echo -e "   ${YELLOW}⚠️  May still load .zshrc if /bin/sh → zsh${NC}"
+fi
 
 # Update PATH if needed
 if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
