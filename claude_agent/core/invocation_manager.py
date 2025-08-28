@@ -188,8 +188,12 @@ class InvocationManager:
         # Check for available tools
         tools = []
         for tool in ['nmap', 'msfconsole', 'airmon-ng', 'node', 'npm']:
-            if os.system(f'which {tool} > /dev/null 2>&1') == 0:
-                tools.append(tool)
+            try:
+                result = subprocess.run(['which', tool], capture_output=True, timeout=1)
+                if result.returncode == 0:
+                    tools.append(tool)
+            except:
+                pass
         
         if tools:
             context_parts.append(f"- Available tools: {', '.join(tools)}")
