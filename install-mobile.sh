@@ -300,6 +300,15 @@ echo -e "  Install path: $INSTALL_BASE"
 echo -e "  Binary:       $BIN_DIR/agent"
 echo -e "  Python:       $PYTHON_CMD ($PYTHON_VERSION)"
 
+# Show shell bypass status
+if [[ "$BYPASS_AGENT" == *"agent-noshrc"* ]]; then
+    echo -e "  Shell bypass: ${GREEN}C wrapper (optimal - prevents Termux popup)${NC}"
+elif [[ "$BYPASS_AGENT" == *"agent-busybox"* ]]; then
+    echo -e "  Shell bypass: ${YELLOW}Busybox wrapper (prevents .zshrc)${NC}"
+else
+    echo -e "  Shell bypass: ${YELLOW}Shell wrapper (may still load .zshrc)${NC}"
+fi
+
 # NetHunter-specific note about self-contained installation
 if [ "$ENV_TYPE" = "nethunter" ] || [ "$ENV_TYPE" = "android" ]; then
     echo -e "\n${GREEN}Note:${NC} Installation is self-contained in $INSTALL_BASE"
