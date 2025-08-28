@@ -10,7 +10,7 @@ from enum import Enum
 from claude_agent.config import AgentConfig
 from claude_agent.providers.claude_provider import LLMProvider, ClaudeCodeProvider, FallbackProvider
 from claude_agent.core.conversation_manager import ConversationManager
-from claude_agent.core.code_executor import CodeExecutor
+from claude_agent.core.language_executor import LanguageExecutor
 from claude_agent.utils.models import (
     MessageRole, ExecutionResult, CodeBlock, ConversationStats
 )
