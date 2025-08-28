@@ -177,7 +177,11 @@ class InvocationManager:
         # Check ADB status
         try:
             import subprocess
-            result = subprocess.run(['adb', 'devices'], capture_output=True, text=True, timeout=2)
+            clean_env = {
+                'PATH': '/usr/bin:/bin:/usr/local/bin:/usr/sbin:/sbin',
+                'LC_ALL': 'C',
+            }
+            result = subprocess.run(['adb', 'devices'], capture_output=True, text=True, timeout=2, env=clean_env)
             if 'device' in result.stdout and 'unauthorized' not in result.stdout:
                 context_parts.append("- ADB device connected and authorized")
             elif 'unauthorized' in result.stdout:
