@@ -1,0 +1,30 @@
+#!/usr/bin/env busybox sh
+# Use busybox sh which should NEVER load .zshrc
+
+echo "🔍 BUSYBOX WRAPPER DEBUG:" >&2
+echo "   Using shell: $(readlink -f /proc/$$/exe 2>/dev/null || echo 'unknown')" >&2
+echo "   Received AGENT_DEBUG_SUBPROCESS: $AGENT_DEBUG_SUBPROCESS" >&2
+echo "   Arguments: $@" >&2
+
+# Get the real agent path
+AGENT_DIR="/root/.mobile-agent"
+AGENT_PYTHON="$AGENT_DIR/.claude_venv/bin/python"
+AGENT_SCRIPT="$AGENT_DIR/agent"
+
+# Build clean environment
+CLEAN_ENV="PATH=/usr/bin:/bin:/usr/local/bin:/sbin:/usr/sbin"
+CLEAN_ENV="$CLEAN_ENV PYTHONPATH=$AGENT_DIR"
+CLEAN_ENV="$CLEAN_ENV PYTHONIOENCODING=utf-8"
+CLEAN_ENV="$CLEAN_ENV PYTHONNOUSERSITE=1"
+CLEAN_ENV="$CLEAN_ENV PYTHONDONTWRITEBYTECODE=1"
+
+# Add debug flag if set
+if [ "$AGENT_DEBUG_SUBPROCESS" = "1" ]; then
+    CLEAN_ENV="$CLEAN_ENV AGENT_DEBUG_SUBPROCESS=1"
+    echo "🔍 ADDING DEBUG FLAG TO CLEAN ENV" >&2
+fi
+
+echo "🔍 BUSYBOX EXECUTING: env -i $CLEAN_ENV $AGENT_PYTHON $AGENT_SCRIPT $@" >&2
+
+# Execute agent with completely clean environment
+exec env -i $CLEAN_ENV "$AGENT_PYTHON" "$AGENT_SCRIPT" "$@"
