@@ -19,6 +19,9 @@ class LanguageExecutor:
     Supports NetHunter-specific execution modes.
     """
     
+    # Class-level list to keep server processes alive
+    _active_servers = []
+    
     def __init__(self, timeout: int = 60):
         """
         Initialize Language Executor.
