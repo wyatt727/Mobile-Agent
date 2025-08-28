@@ -82,11 +82,18 @@ class ClaudeCodeProvider(LLMProvider):
             self.claude_path = "claude"
         
         try:
+            # Use minimal environment to prevent shell initialization
+            clean_env = {
+                'PATH': '/usr/bin:/bin:/usr/local/bin:/usr/sbin:/sbin',
+                'LC_ALL': 'C',
+            }
+            
             result = subprocess.run(
                 [self.claude_path, "--version"],
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=5,
+                env=clean_env
             )
             self._cli_available = result.returncode == 0
             
