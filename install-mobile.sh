@@ -337,9 +337,18 @@ esac
 echo -e "\n${CYAN}Next steps:${NC}"
 if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
     echo -e "  1. Run: ${YELLOW}source $SHELL_CONFIG${NC}"
-    echo -e "  2. Test: ${YELLOW}agent --version${NC}"
+    echo -e "  2. Test: ${YELLOW}agent create a basic web page${NC}"
 else
-    echo -e "  Test: ${YELLOW}agent --version${NC}"
+    echo -e "  Test: ${YELLOW}agent create a basic web page${NC}"
 fi
 
-echo -e "\n${GREEN}Ready to use Mobile Agent!${NC}"
+# Final success message with Termux fix emphasis
+echo -e "\n${GREEN}╔════════════════════════════════════════╗${NC}"
+echo -e "${GREEN}║   🎉 Mobile Agent Ready!               ║${NC}"
+if [[ "$BYPASS_AGENT" == *"agent-noshrc"* ]]; then
+    echo -e "${GREEN}║      ✓ Termux popup issue SOLVED      ║${NC}"
+    echo -e "${GREEN}║      ✓ Fast execution without .zshrc   ║${NC}"
+else
+    echo -e "${YELLOW}║      ⚠️ Termux popup may still occur   ║${NC}"
+fi
+echo -e "${GREEN}╚════════════════════════════════════════╝${NC}"
