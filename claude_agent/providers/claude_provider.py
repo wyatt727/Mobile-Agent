@@ -151,7 +151,7 @@ class ClaudeCodeProvider(LLMProvider):
         """Call Claude CLI with the prompt."""
         try:
             # Check if this is a web-related request
-            web_keywords = ['website', 'web page', 'html', 'css', 'game', 'snake', 'canvas', 
+            web_keywords = ['website', 'web page', 'html', 'css', 'game', 'web', 'canvas', 
                           'javascript', 'webpage', 'html5', 'deploy a site', 'create a web',
                           'localhost', 'react', 'vue', 'portfolio', 'blog', 'build a site']
             prompt_lower = prompt.lower()
