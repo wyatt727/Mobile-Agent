@@ -1,0 +1,199 @@
+#!/usr/bin/env python3
+"""
+Claude Agent CLI - Execute commands naturally using AI
+Usage: agent <request>
+Example: agent open calculator
+"""
+import os
+import sys
+import subprocess
+from pathlib import Path
+
+# Determine the agent installation directory (resolve symlinks)
+AGENT_DIR = Path(__file__).resolve().parent
+VENV_DIR = AGENT_DIR / ".claude_venv"
+
+# Define prompt paths
+NETHUNTER_PROMPT = AGENT_DIR / "claude_agent" / "prompt" / "nethunter-system-prompt-v3.md"
+MACOS_PROMPT = AGENT_DIR / "system-prompt.txt"
+
+# Detect environment and choose appropriate prompt
+def detect_environment():
+    """Detect if running on NetHunter or MacOS"""
+    import platform
+    
+    # Check for NetHunter indicators
+    nethunter_indicators = [
+        Path('/etc/nethunter'),
+        Path('/data/local/nhsystem'),
+        Path('/root/.nethunter')
+    ]
+    
+    # Check environment variable override
+    if os.getenv('NETHUNTER_MODE') == '1':
+        return 'nethunter'
+    
+    # Check for NetHunter file indicators
+    for indicator in nethunter_indicators:
+        if indicator.exists():
+            return 'nethunter'
+    
+    # Check OS type
+    if platform.system() == 'Darwin':
+        return 'macos'
+    
+    # Default to NetHunter for mobile agent
+    return 'nethunter'
+
+# Choose prompt based on detected environment
+env_type = detect_environment()
+if env_type == 'nethunter' and NETHUNTER_PROMPT.exists():
+    SYSTEM_PROMPT_FILE = NETHUNTER_PROMPT
+elif env_type == 'macos' and MACOS_PROMPT.exists():
+    SYSTEM_PROMPT_FILE = MACOS_PROMPT
+else:
+    # Fallback: use whichever prompt exists
+    SYSTEM_PROMPT_FILE = NETHUNTER_PROMPT if NETHUNTER_PROMPT.exists() else MACOS_PROMPT
+
+# Add the agent directory to Python path
+sys.path.insert(0, str(AGENT_DIR))
+
+def ensure_venv():
+    """Ensure virtual environment exists and is set up."""
+    venv_python = VENV_DIR / "bin" / "python"
+    
+    # Check if venv exists (should be created by install.sh)
+
+    if not VENV_DIR.exists():
+        print("Error: Virtual environment not found. Please run ./install.sh first.")
+        sys.exit(1)
+    
+    # Quick sanity check that requirements are installed
+    marker_file = VENV_DIR / ".requirements_installed"
+    if not marker_file.exists():
+        print("Warning: Dependencies may not be installed. Run ./install.sh to ensure proper setup.")
+    
+    return venv_python
+
+def run_agent_request(venv_python, request):
+    """Run the agent with the user's request."""
+    # Debug: print request
+    if os.getenv('AGENT_DEBUG'):
+        print(f"Debug: Processing request: {request}", file=sys.stderr)
+        print(f"Debug: Agent dir: {AGENT_DIR}", file=sys.stderr)
+        print(f"Debug: Venv Python: {venv_python}", file=sys.stderr)
+    
+    # Set up environment with PYTHONPATH
+    env = os.environ.copy()
+    env['PYTHONPATH'] = str(AGENT_DIR)
+    
+    # Create a Python script to run in the venv
+    script = f"""
+import sys
+import os
+
+# Ensure the agent directory is in path
+agent_dir = r'{AGENT_DIR}'
+if agent_dir not in sys.path:
+    sys.path.insert(0, agent_dir)
+
+# Now import claude_agent modules
+try:
+    from claude_agent.config import AgentConfig
+    from claude_agent.core.claude_agent import ClaudeAgent
+except ImportError as e:
+    print(f"Import error: {{e}}", file=sys.stderr)
+    print(f"sys.path: {{sys.path}}", file=sys.stderr)
+    print(f"Agent dir exists: {{os.path.exists(agent_dir)}}", file=sys.stderr)
+    print(f"Claude agent dir exists: {{os.path.exists(os.path.join(agent_dir, 'claude_agent'))}}", file=sys.stderr)
+    sys.exit(1)
+
+# Configure agent
+config = AgentConfig()
+config.claude_system_prompt_file = r'{SYSTEM_PROMPT_FILE}'
+config.verbose = False
+# Set agent directory for finding additional prompts
+config.agent_dir = r'{AGENT_DIR}'
+
+# Initialize agent
+try:
+    agent = ClaudeAgent(config=config)
+except Exception as e:
+    print(f"Error initializing agent: {{e}}", file=sys.stderr)
+    sys.exit(1)
+
+# Process request
+request = r'''{request.replace("'", "\\'")}'''
+debug = {os.getenv('AGENT_DEBUG', '').lower() in ('1', 'true', 'yes')}
+try:
+    response, results = agent.process_request(request)
+    
+    # Always show Claude's response
+    print(response)
+    
+    # Then show execution results if any
+    if results:
+        print("\\n" + "="*60)
+        print("EXECUTION OUTPUT:")
+        print("="*60)
+        
+        for i, result in enumerate(results):
+            if len(results) > 1:
+                print(f"\\n[Block {{i+1}}]")
+            
+            if result.success:
+                if result.output:
+                    print(result.output, end='' if result.output.endswith('\\n') else '\\n')
+            else:
+                print(f"Error: {{result.error}}", file=sys.stderr)
+except Exception as e:
+    print(f"Error processing request: {{e}}", file=sys.stderr)
+    if debug:
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+    sys.exit(1)
+"""
+    
+    # Run the script with PYTHONPATH set
+    result = subprocess.run(
+        [str(venv_python), "-c", script],
+        capture_output=True,
+        text=True,
+        env=env
+    )
+    
+    if result.stdout:
+        print(result.stdout, end='')
+    if result.stderr:
+        print(result.stderr, end='', file=sys.stderr)
+    
+    return result.returncode
+
+def main():
+    """Main entry point."""
+    if len(sys.argv) < 2:
+        print("Usage: agent <request>")
+        print("Example: agent open calculator")
+        sys.exit(1)
+    
+    # Join all arguments as the request
+    request = " ".join(sys.argv[1:])
+    
+    # Special commands
+    if request in ["--help", "-h"]:
+        print(__doc__)
+        sys.exit(0)
+    
+    if request == "--version":
+        print("Claude Agent v2.0")
+        sys.exit(0)
+    
+    # Ensure venv is set up
+    venv_python = ensure_venv()
+    
+    # Run the request
+    exit_code = run_agent_request(venv_python, request)
+    sys.exit(exit_code)
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,77 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+.claude_venv/
+venv/
+ENV/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Generated files
+generated_code/
+conversation.json
+*.backup*
+
+# Temporary
+tmp/
+temp/
+*.tmp
+
+# Security - Never commit credentials
+*.pem
+*.key
+credentials.json
+.env
+
+# Test files
+test_*
+tests/
+*.test
+
+# Documentation build
+docs/_build/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Operating system
+.DS_Store
+Thumbs.db
+
+# Installation markers
+.requirements_installed
+.playwright_installed
+.nethunter_installed
