@@ -243,7 +243,7 @@ class LanguageExecutor:
         """
         try:
             import random
-            import threading
+            import socket
             
             # Create directory for web files
             timestamp = int(time.time())
