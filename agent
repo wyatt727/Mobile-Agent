@@ -166,12 +166,15 @@ except Exception as e:
     sys.exit(1)
 """
     
-    # Run the script with PYTHONPATH set
+    # Run the script with absolutely minimal environment
+    # Use explicit python path and completely clean environment
     result = subprocess.run(
         [str(venv_python), "-c", script],
         capture_output=True,
         text=True,
-        env=env
+        env=env,
+        # Additional isolation on Unix systems
+        start_new_session=True if sys.platform != 'win32' else False
     )
     
     if result.stdout:
