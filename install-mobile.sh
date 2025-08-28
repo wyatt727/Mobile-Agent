@@ -225,6 +225,12 @@ if command -v gcc >/dev/null 2>&1; then
     
     echo -e "   ${BLUE}Attempting C wrapper compilation...${NC}"
     
+    # Ensure we don't accidentally overwrite the Python agent file
+    if [ -f agent ]; then
+        # Backup the Python agent file before compilation
+        cp agent agent.backup.$$
+    fi
+    
     # Try ARM64-optimized compilation first
     if gcc -march=armv8-a -O2 -o agent-noshrc agent-noshrc.c 2>/dev/null; then
         chmod +x agent-noshrc
@@ -233,6 +239,16 @@ if command -v gcc >/dev/null 2>&1; then
             BYPASS_AGENT="$WORKING_DIR/agent-noshrc"
             echo -e "${GREEN}[✓]${NC} ARM64-optimized C wrapper compiled and tested successfully"
             echo -e "   ${GREEN}This completely prevents shell initialization${NC}"
+        fi
+    fi
+    
+    # Restore Python agent file if it got corrupted during compilation
+    if [ -f agent.backup.$$ ]; then
+        if [ ! -f agent ] || grep -q $'\x00' agent 2>/dev/null; then
+            echo -e "${YELLOW}[*]${NC} Restoring Python agent file (was corrupted during compilation)"
+            mv agent.backup.$$ agent
+        else
+            rm -f agent.backup.$$
         fi
     # Fallback to standard gcc
     elif gcc -o agent-noshrc agent-noshrc.c 2>/dev/null; then
