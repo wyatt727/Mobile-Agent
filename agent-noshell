@@ -1,0 +1,35 @@
+#!/bin/bash
+# Shell wrapper that prevents .zshrc loading by using clean environment
+
+# Get the real agent path
+AGENT_DIR="/root/.mobile-agent"
+AGENT_PYTHON="$AGENT_DIR/.claude_venv/bin/python"
+AGENT_SCRIPT="$AGENT_DIR/agent"
+
+# Create absolutely minimal environment
+export PATH="/usr/bin:/bin:/usr/local/bin:/sbin:/usr/sbin"
+export PYTHONPATH="$AGENT_DIR"
+export PYTHONIOENCODING="utf-8"
+
+# Remove all shell-related environment variables
+unset SHELL
+unset HOME
+unset USER
+unset ZSH
+unset BASH
+unset ENV
+unset BASH_ENV
+unset ZDOTDIR
+
+# Pass through debug flag if set
+if [ "$AGENT_DEBUG_SUBPROCESS" = "1" ]; then
+    export AGENT_DEBUG_SUBPROCESS=1
+fi
+
+# Execute agent with clean environment using exec to replace process
+exec env -i \
+    PATH="$PATH" \
+    PYTHONPATH="$PYTHONPATH" \
+    PYTHONIOENCODING="$PYTHONIOENCODING" \
+    ${AGENT_DEBUG_SUBPROCESS:+AGENT_DEBUG_SUBPROCESS=1} \
+    "$AGENT_PYTHON" "$AGENT_SCRIPT" "$@"
