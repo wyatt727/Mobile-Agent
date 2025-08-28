@@ -183,12 +183,23 @@ class CodeExecutor:
             
             # Execute code
             try:
+                # Use minimal environment to avoid shell initialization
+                clean_env = {
+                    'PATH': os.environ.get('PATH', '/usr/bin:/bin:/usr/local/bin'),
+                    'HOME': os.environ.get('HOME', ''),
+                    'USER': os.environ.get('USER', ''),
+                    'LANG': os.environ.get('LANG', 'en_US.UTF-8'),
+                    'LC_ALL': os.environ.get('LC_ALL', 'en_US.UTF-8'),
+                    'PYTHONIOENCODING': 'utf-8',
+                    'PYTHONPATH': os.environ.get('PYTHONPATH', '')
+                }
+                
                 result = subprocess.run(
                     [sys.executable, "-c", code],
                     capture_output=True,
                     text=True,
                     timeout=self.timeout,
-                    env={**os.environ, 'PYTHONIOENCODING': 'utf-8'}
+                    env=clean_env
                 )
                 
                 return ExecutionResult(
