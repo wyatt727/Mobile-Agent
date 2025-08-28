@@ -89,8 +89,11 @@ def run_agent_request(venv_python, request):
         'PYTHONPATH': str(AGENT_DIR),
         'PATH': '/usr/bin:/bin:/usr/local/bin:/usr/sbin:/sbin',  # Fixed minimal PATH
         'PYTHONIOENCODING': 'utf-8',
-        # Don't pass HOME, USER, or any shell-related vars
-        # This prevents any shell initialization files from being found
+        # Explicitly prevent Python from loading any startup files
+        'PYTHONNOUSERSITE': '1',  # Don't add user site directory
+        'PYTHONDONTWRITEBYTECODE': '1',  # Don't create .pyc files
+        # Don't pass HOME, USER, PYTHONSTARTUP, or any shell-related vars
+        # This prevents any initialization files from being found or loaded
     }
     # Add AGENT_DEBUG if set
     if os.getenv('AGENT_DEBUG'):
