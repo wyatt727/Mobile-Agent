@@ -266,8 +266,13 @@ class LanguageExecutor:
                 start_new_session=True
             )
             
-            # Store server process for potential cleanup later
-            self._web_server = server_process
+            # Store server process to keep it alive
+            LanguageExecutor._active_servers.append({
+                'process': server_process,
+                'port': port,
+                'dir': str(web_dir),
+                'pid': server_process.pid
+            })
             
             # Give server time to start and check if it's running
             time.sleep(2)
