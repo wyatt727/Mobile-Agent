@@ -157,6 +157,9 @@ class ClaudeCodeProvider(LLMProvider):
             prompt_lower = prompt.lower()
             is_web_request = any(keyword in prompt_lower for keyword in web_keywords)
             
+            if is_web_request:
+                logger.debug(f"Web request detected. Keywords found in: {prompt_lower[:100]}...")
+            
             # Build the prompt with appropriate system prompts
             if self.system_prompt_file:
                 if is_web_request:
