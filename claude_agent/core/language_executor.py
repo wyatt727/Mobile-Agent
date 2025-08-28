@@ -254,17 +254,17 @@ class LanguageExecutor:
             # Find available port
             port = random.randint(8080, 9000)
             
-            # Start web server in background
-            def start_server():
-                os.chdir(web_dir)
-                subprocess.run(
-                    ['python3', '-m', 'http.server', str(port)],
-                    capture_output=True,
-                    timeout=None  # Run indefinitely
-                )
+            # Start web server in background using subprocess.Popen for proper async
+            server_process = subprocess.Popen(
+                ['python3', '-m', 'http.server', str(port)],
+                cwd=str(web_dir),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                start_new_session=True
+            )
             
-            server_thread = threading.Thread(target=start_server, daemon=True)
-            server_thread.start()
+            # Store server process for potential cleanup later
+            self._web_server = server_process
             
             # Give server time to start
             time.sleep(1)
