@@ -328,10 +328,10 @@ class LanguageExecutor:
                         timeout=5
                     )
                     
-                    # Launch browser on Android
+                    # Launch browser on Android (bypass shell initialization)
                     subprocess.run(
-                        ['adb', 'shell', 'am', 'start', '-a', 'android.intent.action.VIEW',
-                         '-d', f'http://localhost:{port}'],
+                        ['adb', 'shell', 'env', '-i', 'sh', '-c', 
+                         f'am start -a android.intent.action.VIEW -d http://localhost:{port}'],
                         capture_output=True,
                         timeout=5
                     )
