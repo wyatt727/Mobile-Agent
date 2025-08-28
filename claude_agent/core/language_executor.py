@@ -107,7 +107,7 @@ class LanguageExecutor:
             script_file.chmod(0o755)
             
             result = subprocess.run(
-                ['bash', str(script_file)],
+                ['/bin/sh', str(script_file)],
                 capture_output=True,
                 text=True,
                 timeout=self.timeout
