@@ -9,6 +9,12 @@ import sys
 import subprocess
 from pathlib import Path
 
+# Debug environment variables at startup
+print(f"🔍 AGENT STARTUP DEBUG:", file=sys.stderr)
+print(f"   AGENT_DEBUG_SUBPROCESS: {os.environ.get('AGENT_DEBUG_SUBPROCESS', 'NOT SET')}", file=sys.stderr)
+print(f"   SHELL: {os.environ.get('SHELL', 'NOT SET')}", file=sys.stderr)
+print(f"   PWD: {os.environ.get('PWD', 'NOT SET')}", file=sys.stderr)
+
 # Enable subprocess debugging if AGENT_DEBUG_SUBPROCESS is set
 if os.environ.get('AGENT_DEBUG_SUBPROCESS') == '1':
     import traceback
