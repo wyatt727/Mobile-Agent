@@ -192,27 +192,55 @@ touch "$VENV_DIR/.requirements_installed"
 chmod +x "$WORKING_DIR/agent"
 chmod +x "$WORKING_DIR/agent-noshell"
 
-# Try to compile C wrapper for complete shell bypass
-echo -e "\n${BLUE}[*]${NC} Compiling shell bypass wrapper..."
-if command -v gcc >/dev/null 2>&1; then
+# Try to find the best shell bypass method
+echo -e "\n${BLUE}[*]${NC} Finding best shell bypass method..."
+chmod +x "$WORKING_DIR/agent-noshell"
+chmod +x "$WORKING_DIR/agent-busybox" 2>/dev/null
+
+# Try C wrapper compilation
+BYPASS_AGENT=""
+if command -v gcc >/dev/null 2>&1 || command -v clang >/dev/null 2>&1 || command -v make >/dev/null 2>&1; then
     cd "$WORKING_DIR"
-    if gcc -o agent-noshrc agent-noshrc.c 2>/dev/null; then
+    
+    # Try make first
+    if make agent-noshrc >/dev/null 2>&1; then
+        BYPASS_AGENT="$WORKING_DIR/agent-noshrc"
+        echo -e "${GREEN}[✓]${NC} C wrapper compiled with make (complete shell bypass)"
+    # Try direct gcc compilation
+    elif gcc -o agent-noshrc agent-noshrc.c 2>/dev/null; then
+        chmod +x agent-noshrc
+        BYPASS_AGENT="$WORKING_DIR/agent-noshrc" 
+        echo -e "${GREEN}[✓]${NC} C wrapper compiled with gcc (complete shell bypass)"
+    # Try static linking
+    elif gcc -static -o agent-noshrc agent-noshrc.c 2>/dev/null; then
         chmod +x agent-noshrc
         BYPASS_AGENT="$WORKING_DIR/agent-noshrc"
-        echo -e "${GREEN}[✓]${NC} C wrapper compiled (complete shell bypass)"
+        echo -e "${GREEN}[✓]${NC} C wrapper compiled static (complete shell bypass)"
+    # Try clang
+    elif clang -o agent-noshrc agent-noshrc.c 2>/dev/null; then
+        chmod +x agent-noshrc
+        BYPASS_AGENT="$WORKING_DIR/agent-noshrc"
+        echo -e "${GREEN}[✓]${NC} C wrapper compiled with clang (complete shell bypass)"
+    fi
+fi
+
+# Fallback to shell wrappers
+if [ -z "$BYPASS_AGENT" ]; then
+    # Check if busybox is available and sh is linked to zsh
+    if command -v busybox >/dev/null 2>&1 && [ "$(readlink /bin/sh | grep -c zsh)" -gt 0 ] 2>/dev/null; then
+        BYPASS_AGENT="$WORKING_DIR/agent-busybox"
+        echo -e "${YELLOW}[*]${NC} C compilation failed, using busybox sh wrapper (sh is zsh)"
     else
         BYPASS_AGENT="$WORKING_DIR/agent-noshell"
         echo -e "${YELLOW}[*]${NC} C compilation failed, using /bin/sh wrapper"
     fi
-else
-    BYPASS_AGENT="$WORKING_DIR/agent-noshell"
-    echo -e "${YELLOW}[*]${NC} gcc not available, using /bin/sh wrapper"
 fi
 
 # Create symlink to best available shell-bypassing agent
 echo -e "\n${BLUE}[*]${NC} Creating symlink..."
 ln -sf "$BYPASS_AGENT" "$BIN_DIR/agent"
-echo -e "${GREEN}[✓]${NC} Symlink created: ${CYAN}$BIN_DIR/agent${NC} → ${CYAN}$BYPASS_AGENT${NC} (prevents .zshrc loading)"
+echo -e "${GREEN}[✓]${NC} Symlink created: ${CYAN}$BIN_DIR/agent${NC} → ${CYAN}$BYPASS_AGENT${NC}"
+echo -e "   This prevents .zshrc loading and Termux auto-start"
 
 # Update PATH if needed
 if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
