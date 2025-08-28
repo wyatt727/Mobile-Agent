@@ -223,8 +223,8 @@ class CodeExecutor:
             )
         else:
             # Standard shell execution (chroot/local)
-            # Detect shell type (bash, zsh, etc.)
-            shell = os.environ.get('SHELL', '/bin/sh')
+            # Use /bin/sh to avoid loading user's shell config (.zshrc, .bashrc, etc.)
+            shell = '/bin/sh'
             
             # Check if this is a pip install command
             if self._is_pip_install(code):
