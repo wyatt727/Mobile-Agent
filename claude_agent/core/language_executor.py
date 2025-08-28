@@ -269,16 +269,17 @@ class LanguageExecutor:
             
             port = find_free_port()
             
-            # Start web server completely detached using nohup to survive parent exit
+            # Start web server completely detached to survive parent exit
             log_file = web_dir / 'server.log'
             
-            # Use nohup to completely detach the server process
+            # Start server without nohup to avoid shell invocation
+            # Use setsid for proper detachment instead
             server_process = subprocess.Popen(
-                ['nohup', 'python3', '-m', 'http.server', str(port)],
+                ['python3', '-m', 'http.server', str(port)],
                 cwd=str(web_dir),
                 stdout=open(log_file, 'w'),
                 stderr=subprocess.STDOUT,
-                start_new_session=True,
+                start_new_session=True,  # Creates new session (setsid equivalent)
                 preexec_fn=os.setpgrp  # Fully detach from parent process group
             )
             
@@ -356,8 +357,9 @@ class LanguageExecutor:
                         except:
                             subprocess.run(['firefox', url], check=False)
                     else:
-                        # Windows fallback
-                        subprocess.run(['start', url], shell=True, check=False)
+                        # Windows fallback - use os.startfile instead of shell
+                        import os
+                        os.startfile(url)
                     
                     output += f"✓ Browser launched locally\n"
                 except Exception as e:
