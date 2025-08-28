@@ -192,10 +192,27 @@ touch "$VENV_DIR/.requirements_installed"
 chmod +x "$WORKING_DIR/agent"
 chmod +x "$WORKING_DIR/agent-noshell"
 
-# Create symlink to shell-bypassing agent (prevents .zshrc loading)
+# Try to compile C wrapper for complete shell bypass
+echo -e "\n${BLUE}[*]${NC} Compiling shell bypass wrapper..."
+if command -v gcc >/dev/null 2>&1; then
+    cd "$WORKING_DIR"
+    if gcc -o agent-noshrc agent-noshrc.c 2>/dev/null; then
+        chmod +x agent-noshrc
+        BYPASS_AGENT="$WORKING_DIR/agent-noshrc"
+        echo -e "${GREEN}[✓]${NC} C wrapper compiled (complete shell bypass)"
+    else
+        BYPASS_AGENT="$WORKING_DIR/agent-noshell"
+        echo -e "${YELLOW}[*]${NC} C compilation failed, using /bin/sh wrapper"
+    fi
+else
+    BYPASS_AGENT="$WORKING_DIR/agent-noshell"
+    echo -e "${YELLOW}[*]${NC} gcc not available, using /bin/sh wrapper"
+fi
+
+# Create symlink to best available shell-bypassing agent
 echo -e "\n${BLUE}[*]${NC} Creating symlink..."
-ln -sf "$WORKING_DIR/agent-noshell" "$BIN_DIR/agent"
-echo -e "${GREEN}[✓]${NC} Symlink created: ${CYAN}$BIN_DIR/agent${NC} → ${CYAN}$WORKING_DIR/agent-noshell${NC} (shell-bypass version)"
+ln -sf "$BYPASS_AGENT" "$BIN_DIR/agent"
+echo -e "${GREEN}[✓]${NC} Symlink created: ${CYAN}$BIN_DIR/agent${NC} → ${CYAN}$BYPASS_AGENT${NC} (prevents .zshrc loading)"
 
 # Update PATH if needed
 if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
