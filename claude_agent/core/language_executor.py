@@ -1,0 +1,312 @@
+#!/usr/bin/env python3
+"""
+Language Executor - Handles execution of code blocks with NetHunter-specific languages
+"""
+import os
+import subprocess
+import tempfile
+import time
+import logging
+from pathlib import Path
+from typing import Tuple, Optional
+
+logger = logging.getLogger(__name__)
+
+
+class LanguageExecutor:
+    """
+    Executes code blocks based on language identifiers.
+    Supports NetHunter-specific execution modes.
+    """
+    
+    def __init__(self, timeout: int = 60):
+        """
+        Initialize Language Executor.
+        
+        Args:
+            timeout: Execution timeout in seconds
+        """
+        self.timeout = timeout
+        self.temp_dir = Path("/tmp")
+        
+        # Check if we're in NetHunter environment
+        self.is_nethunter = any([
+            Path('/etc/nethunter').exists(),
+            Path('/data/local/nhsystem').exists(),
+            os.getenv('NETHUNTER_MODE') == '1'
+        ])
+        
+        # Check ADB availability
+        self.has_adb = self._check_command('adb')
+        
+        logger.info(f"LanguageExecutor initialized. NetHunter: {self.is_nethunter}, ADB: {self.has_adb}")
+    
+    def _check_command(self, command: str) -> bool:
+        """Check if a command is available."""
+        try:
+            subprocess.run(['which', command], capture_output=True, check=True)
+            return True
+        except:
+            return False
+    
+    def execute(self, code: str, language: str) -> Tuple[bool, str, str]:
+        """
+        Execute code based on language identifier.
+        
+        Args:
+            code: Code to execute
+            language: Language identifier (bash, python, android, android-root, html, etc.)
+            
+        Returns:
+            Tuple of (success, stdout, stderr)
+        """
+        # Normalize language identifier
+        language = language.lower().strip()
+        
+        # Map alternative names
+        language_map = {
+            'shell': 'bash',
+            'sh': 'bash',
+            'py': 'python',
+            'python3': 'python',
+            'js': 'javascript',
+            'node': 'javascript'
+        }
+        
+        language = language_map.get(language, language)
+        
+        logger.info(f"Executing {language} code block ({len(code)} bytes)")
+        
+        try:
+            # Route to appropriate executor
+            if language in ['bash', 'shell']:
+                return self._execute_bash(code)
+            elif language == 'python':
+                return self._execute_python(code)
+            elif language == 'javascript':
+                return self._execute_javascript(code)
+            elif language == 'android':
+                return self._execute_android(code)
+            elif language == 'android-root':
+                return self._execute_android_root(code)
+            elif language == 'html':
+                return self._execute_html(code)
+            else:
+                return False, "", f"Unsupported language: {language}"
+        
+        except Exception as e:
+            logger.error(f"Error executing {language} code: {e}")
+            return False, "", str(e)
+    
+    def _execute_bash(self, code: str) -> Tuple[bool, str, str]:
+        """Execute bash/shell code."""
+        try:
+            # Write to temporary script for better execution
+            script_file = self.temp_dir / f"script_{int(time.time())}.sh"
+            script_file.write_text(code)
+            script_file.chmod(0o755)
+            
+            result = subprocess.run(
+                ['bash', str(script_file)],
+                capture_output=True,
+                text=True,
+                timeout=self.timeout
+            )
+            
+            # Cleanup
+            script_file.unlink(missing_ok=True)
+            
+            return result.returncode == 0, result.stdout, result.stderr
+            
+        except subprocess.TimeoutExpired:
+            return False, "", f"Execution timed out after {self.timeout} seconds"
+        except Exception as e:
+            return False, "", str(e)
+    
+    def _execute_python(self, code: str) -> Tuple[bool, str, str]:
+        """Execute Python code."""
+        try:
+            result = subprocess.run(
+                ['python3', '-c', code],
+                capture_output=True,
+                text=True,
+                timeout=self.timeout
+            )
+            
+            return result.returncode == 0, result.stdout, result.stderr
+            
+        except subprocess.TimeoutExpired:
+            return False, "", f"Execution timed out after {self.timeout} seconds"
+        except Exception as e:
+            return False, "", str(e)
+    
+    def _execute_javascript(self, code: str) -> Tuple[bool, str, str]:
+        """Execute JavaScript code with Node.js."""
+        if not self._check_command('node'):
+            return False, "", "Node.js not installed"
+        
+        try:
+            result = subprocess.run(
+                ['node', '-e', code],
+                capture_output=True,
+                text=True,
+                timeout=self.timeout
+            )
+            
+            return result.returncode == 0, result.stdout, result.stderr
+            
+        except subprocess.TimeoutExpired:
+            return False, "", f"Execution timed out after {self.timeout} seconds"
+        except Exception as e:
+            return False, "", str(e)
+    
+    def _execute_android(self, code: str) -> Tuple[bool, str, str]:
+        """
+        Execute code on Android via adb shell.
+        This runs commands on the Android system (not as root).
+        """
+        if not self.has_adb:
+            return False, "", "ADB not available"
+        
+        try:
+            # Check device connection
+            devices_result = subprocess.run(
+                ['adb', 'devices'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            
+            if 'device' not in devices_result.stdout:
+                return False, "", "No ADB device connected"
+            
+            # Execute via adb shell
+            result = subprocess.run(
+                ['adb', 'shell', code],
+                capture_output=True,
+                text=True,
+                timeout=self.timeout
+            )
+            
+            return result.returncode == 0, result.stdout, result.stderr
+            
+        except subprocess.TimeoutExpired:
+            return False, "", f"Execution timed out after {self.timeout} seconds"
+        except Exception as e:
+            return False, "", str(e)
+    
+    def _execute_android_root(self, code: str) -> Tuple[bool, str, str]:
+        """
+        Execute code on Android as root via adb shell su.
+        This runs commands with root privileges.
+        """
+        if not self.has_adb:
+            return False, "", "ADB not available"
+        
+        try:
+            # Check device connection
+            devices_result = subprocess.run(
+                ['adb', 'devices'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            
+            if 'device' not in devices_result.stdout:
+                return False, "", "No ADB device connected"
+            
+            # Execute as root via su
+            # Escape single quotes in the code
+            escaped_code = code.replace("'", "'\\''")
+            
+            result = subprocess.run(
+                ['adb', 'shell', 'su', '-c', f"'{escaped_code}'"],
+                capture_output=True,
+                text=True,
+                timeout=self.timeout
+            )
+            
+            return result.returncode == 0, result.stdout, result.stderr
+            
+        except subprocess.TimeoutExpired:
+            return False, "", f"Execution timed out after {self.timeout} seconds"
+        except Exception as e:
+            return False, "", str(e)
+    
+    def _execute_html(self, code: str) -> Tuple[bool, str, str]:
+        """
+        Execute HTML code by creating a web server and launching browser.
+        This is the NetHunter web deployment feature.
+        """
+        try:
+            import random
+            import threading
+            
+            # Create directory for web files
+            timestamp = int(time.time())
+            web_dir = self.temp_dir / f"web_{timestamp}"
+            web_dir.mkdir(exist_ok=True)
+            
+            # Write HTML file
+            html_file = web_dir / "index.html"
+            html_file.write_text(code)
+            
+            # Find available port
+            port = random.randint(8080, 9000)
+            
+            # Start web server in background
+            def start_server():
+                os.chdir(web_dir)
+                subprocess.run(
+                    ['python3', '-m', 'http.server', str(port)],
+                    capture_output=True,
+                    timeout=None  # Run indefinitely
+                )
+            
+            server_thread = threading.Thread(target=start_server, daemon=True)
+            server_thread.start()
+            
+            # Give server time to start
+            time.sleep(1)
+            
+            output = f"Web server started at http://localhost:{port}\n"
+            output += f"Files served from: {web_dir}\n"
+            
+            # If we have ADB, set up port forwarding and launch browser
+            if self.has_adb:
+                try:
+                    # Set up port forwarding
+                    subprocess.run(
+                        ['adb', 'reverse', f'tcp:{port}', f'tcp:{port}'],
+                        capture_output=True,
+                        timeout=5
+                    )
+                    
+                    # Launch browser on Android
+                    subprocess.run(
+                        ['adb', 'shell', 'am', 'start', '-a', 'android.intent.action.VIEW',
+                         '-d', f'http://localhost:{port}'],
+                        capture_output=True,
+                        timeout=5
+                    )
+                    
+                    output += f"Browser launched on Android device\n"
+                    
+                except Exception as e:
+                    output += f"Could not launch browser: {e}\n"
+            
+            return True, output, ""
+            
+        except Exception as e:
+            return False, "", f"Failed to deploy HTML: {e}"
+
+
+# Global executor instance
+_executor = None
+
+def get_executor() -> LanguageExecutor:
+    """Get or create global language executor."""
+    global _executor
+    if _executor is None:
+        _executor = LanguageExecutor()
+    return _executor
