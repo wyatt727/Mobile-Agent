@@ -284,27 +284,38 @@ class LanguageExecutor:
             # Start web server detached to survive parent exit
             log_file = web_dir / 'server.log'
             
-            # Start server process with complete isolation
-            # Platform-specific process isolation
-            if sys.platform == 'darwin':
-                # macOS: use only start_new_session
-                server_process = subprocess.Popen(
-                    ['python3', '-m', 'http.server', str(port)],
-                    cwd=str(web_dir),
-                    stdout=subprocess.DEVNULL,  # Avoid stdout competition with audio
-                    stderr=subprocess.DEVNULL,  # Avoid stderr competition
-                    start_new_session=True  # Creates new session for independence
-                )
-            else:
-                # Linux/NetHunter: use both for complete isolation
-                server_process = subprocess.Popen(
-                    ['python3', '-m', 'http.server', str(port)],
-                    cwd=str(web_dir),
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    start_new_session=True,
-                    preexec_fn=os.setsid  # Complete process group isolation
-                )
+            # Preserve audio environment for web apps that need sound
+            env = os.environ.copy()
+            # Ensure PULSE_SERVER is available for audio playback
+            if 'PULSE_SERVER' not in env:
+                env['PULSE_SERVER'] = 'tcp:127.0.0.1:4713'
+            
+            # Use log file to avoid stdout competition while preserving debug info
+            log_file = web_dir / 'server.log'
+            with open(log_file, 'w') as log_handle:
+                # Start server process with complete isolation
+                # Platform-specific process isolation
+                if sys.platform == 'darwin':
+                    # macOS: use only start_new_session
+                    server_process = subprocess.Popen(
+                        ['python3', '-m', 'http.server', str(port)],
+                        cwd=str(web_dir),
+                        stdout=log_handle,  # Log to file instead of DEVNULL
+                        stderr=subprocess.STDOUT,  # Combine stderr with stdout
+                        env=env,  # Pass environment with audio support
+                        start_new_session=True  # Creates new session for independence
+                    )
+                else:
+                    # Linux/NetHunter: use both for complete isolation
+                    server_process = subprocess.Popen(
+                        ['python3', '-m', 'http.server', str(port)],
+                        cwd=str(web_dir),
+                        stdout=log_handle,
+                        stderr=subprocess.STDOUT,
+                        env=env,  # Pass environment with audio support
+                        start_new_session=True,
+                        preexec_fn=os.setsid  # Complete process group isolation
+                    )
             
             # Store server process to keep it alive
             LanguageExecutor._active_servers.append({
