@@ -100,9 +100,9 @@ class WebDeploymentManager:
         
         # Start appropriate server
         if with_backend:
-            deployment_info.update(self._start_backend_server(deploy_dir, with_database))
+            deployment_info.update(self._start_backend_server(deploy_dir, with_database, timestamp))
         else:
-            deployment_info.update(self._start_static_server(deploy_dir))
+            deployment_info.update(self._start_static_server(deploy_dir, timestamp))
         
         # Set up port forwarding and launch browser
         if deployment_info.get('port'):
@@ -157,7 +157,7 @@ class WebDeploymentManager:
             logger.error(f"Database setup failed: {e}")
             return {'error': str(e)}
     
-    def _start_static_server(self, deploy_dir: Path) -> Dict[str, Any]:
+    def _start_static_server(self, deploy_dir: Path, timestamp: int = None) -> Dict[str, Any]:
         """Start a simple Python HTTP server"""
         port = self._find_available_port()
         
@@ -186,12 +186,13 @@ class WebDeploymentManager:
                 )
             
             # Store process group ID for safe cleanup
-            try:
-                pgid = os.getpgid(server_process.pid)
-                self.process_groups[deployment_info['timestamp']] = pgid
-            except:
-                # Fallback if we can't get pgid
-                self.process_groups[deployment_info['timestamp']] = server_process.pid
+            if timestamp:
+                try:
+                    pgid = os.getpgid(server_process.pid)
+                    self.process_groups[timestamp] = pgid
+                except:
+                    # Fallback if we can't get pgid
+                    self.process_groups[timestamp] = server_process.pid
             
             # Give server time to start
             time.sleep(1)
@@ -220,7 +221,7 @@ class WebDeploymentManager:
                 'error': str(e)
             }
     
-    def _start_backend_server(self, deploy_dir: Path, has_database: bool) -> Dict[str, Any]:
+    def _start_backend_server(self, deploy_dir: Path, has_database: bool, timestamp: int = None) -> Dict[str, Any]:
         """Start a Flask backend server with API support"""
         port = self._find_available_port()
         
@@ -329,12 +330,13 @@ if __name__ == '__main__':
                 )
             
             # Store process group ID for safe cleanup
-            try:
-                pgid = os.getpgid(server_process.pid)
-                self.process_groups[deployment_info['timestamp']] = pgid
-            except:
-                # Fallback if we can't get pgid
-                self.process_groups[deployment_info['timestamp']] = server_process.pid
+            if timestamp:
+                try:
+                    pgid = os.getpgid(server_process.pid)
+                    self.process_groups[timestamp] = pgid
+                except:
+                    # Fallback if we can't get pgid
+                    self.process_groups[timestamp] = server_process.pid
             
             # Wait for server to start
             time.sleep(2)
