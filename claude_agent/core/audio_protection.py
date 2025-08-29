@@ -59,34 +59,59 @@ class AudioServiceProtector:
             # Find audio-related processes
             for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
                 try:
-                    cmdline = ' '.join(proc.info['cmdline'] or [])
-                    name = proc.info['name'] or ''
+                    # Safely get process info
+                    pid = proc.info.get('pid')
+                    name = proc.info.get('name', '')
+                    cmdline_list = proc.info.get('cmdline', [])
+                    
+                    # Skip if we can't get basic info
+                    if not pid:
+                        continue
+                    
+                    # Build cmdline string safely
+                    cmdline = ''
+                    if cmdline_list:
+                        try:
+                            cmdline = ' '.join(str(x) for x in cmdline_list if x)
+                        except:
+                            cmdline = str(cmdline_list)
                     
                     # Check if it's an audio service
                     if any(audio_key in cmdline.lower() or audio_key in name.lower() 
                            for audio_key in self.audio_processes):
                         
+                        # Get status safely
+                        try:
+                            status = proc.status()
+                        except:
+                            status = 'unknown'
+                        
                         audio_services['processes'].append({
-                            'pid': proc.info['pid'],
+                            'pid': pid,
                             'name': name,
-                            'cmdline': cmdline[:100],  # Truncate for readability
-                            'status': proc.status()
+                            'cmdline': cmdline[:100] if cmdline else 'N/A',
+                            'status': status
                         })
                         
                         # Mark as protected
-                        self.protected_pids.add(proc.info['pid'])
+                        self.protected_pids.add(pid)
                         
-                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                except (psutil.NoSuchProcess, psutil.AccessDenied, AttributeError):
                     continue
             
             # Check audio ports
-            for conn in psutil.net_connections():
-                if conn.laddr and conn.laddr.port in self.audio_ports:
-                    audio_services['ports'].append({
-                        'port': conn.laddr.port,
-                        'status': conn.status,
-                        'pid': conn.pid if conn.pid else 'unknown'
-                    })
+            try:
+                for conn in psutil.net_connections():
+                    if conn.laddr and hasattr(conn.laddr, 'port'):
+                        if conn.laddr.port in self.audio_ports:
+                            audio_services['ports'].append({
+                                'port': conn.laddr.port,
+                                'status': conn.status,
+                                'pid': conn.pid if conn.pid else 'unknown'
+                            })
+            except (psutil.AccessDenied, PermissionError):
+                # On macOS, may need elevated permissions for net_connections
+                logger.debug("Cannot access network connections (permission denied)")
             
             # Determine health status
             pulse_running = any('pulse' in p['name'].lower() 
@@ -171,9 +196,19 @@ class AudioServiceProtector:
             )
         
         # Check for audio warmstart
-        warmstart_running = any('warmstart' in str(p.cmdline()) 
-                               for p in psutil.process_iter() 
-                               if hasattr(p, 'cmdline'))
+        warmstart_running = False
+        try:
+            for p in psutil.process_iter(['cmdline']):
+                try:
+                    if p.info['cmdline']:
+                        cmdline_str = ' '.join(p.info['cmdline'])
+                        if 'warmstart' in cmdline_str:
+                            warmstart_running = True
+                            break
+                except (psutil.NoSuchProcess, psutil.AccessDenied, TypeError):
+                    continue
+        except:
+            pass
         health['warmstart_active'] = warmstart_running
         
         if not warmstart_running:
@@ -190,9 +225,21 @@ class AudioServiceProtector:
         """
         try:
             for conn in psutil.net_connections():
-                if (conn.laddr and conn.laddr.port == port and 
-                    conn.status == 'LISTEN'):
-                    return True
+                if conn.laddr and hasattr(conn.laddr, 'port'):
+                    if (conn.laddr.port == port and 
+                        conn.status == 'LISTEN'):
+                        return True
+        except (psutil.AccessDenied, PermissionError):
+            # Try alternative method using socket
+            import socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                # If we can't bind, port is in use
+                sock.bind(('127.0.0.1', port))
+                sock.close()
+                return False  # Port is free
+            except OSError:
+                return True  # Port is in use
         except:
             pass
         return False
