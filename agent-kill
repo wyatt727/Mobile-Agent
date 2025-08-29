@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+"""
+Agent Kill - Quick command to kill all Claude Agent web servers
+"""
+import sys
+from pathlib import Path
+
+# Add parent directory to path
+sys.path.insert(0, str(Path(__file__).parent))
+
+from claude_agent.core.agent_cleanup import AgentCleanup
+
+def main():
+    """Quick kill command with simple interface"""
+    import argparse
+    
+    parser = argparse.ArgumentParser(
+        description='Kill all Claude Agent web servers',
+        usage='agent-kill [options]'
+    )
+    parser.add_argument('-y', '--yes', action='store_true',
+                       help='Skip confirmation (auto-yes)')
+    parser.add_argument('-q', '--quiet', action='store_true',
+                       help='Minimal output')
+    parser.add_argument('-l', '--list', action='store_true',
+                       help='List servers without killing')
+    
+    args = parser.parse_args()
+    
+    cleanup = AgentCleanup()
+    
+    if args.list:
+        # Just list, don't kill
+        servers = cleanup.find_agent_servers()
+        if not servers:
+            if not args.quiet:
+                print("No active agent servers found")
+        else:
+            print(f"Active servers: {len(servers)}")
+            for server in servers:
+                print(f"  PID {server['pid']}: port {server['port']}, running {server['runtime_human']}")
+        return
+    
+    # Perform cleanup
+    if args.quiet:
+        # Minimal output mode
+        result = cleanup.kill_all_agent_servers(interactive=not args.yes)
+        print(f"Killed {result['killed']} servers")
+    else:
+        # Normal mode with full output
+        cleanup.kill_all_agent_servers(interactive=not args.yes)
+
+if __name__ == "__main__":
+    main()
