@@ -293,17 +293,17 @@ else:
     if result.get('freed_ports'):
         print(f"Freed ports: {', '.join(map(str, sorted(result['freed_ports'])))}")
 """
-            result = subprocess.run(
+            cleanup_result = subprocess.run(
                 [str(venv_python), "-c", cleanup_script],
                 capture_output=True,
                 text=True,
                 cwd=Path(__file__).parent
             )
-            if result.stdout:
-                print(result.stdout, end='')
-            if result.stderr and "import" not in result.stderr:  # Ignore import warnings
-                print(result.stderr, end='', file=sys.stderr)
-            sys.exit(0 if result.returncode == 0 else 1)
+            if cleanup_result.stdout:
+                print(cleanup_result.stdout, end='')
+            if cleanup_result.stderr and "import" not in cleanup_result.stderr:  # Ignore import warnings
+                print(cleanup_result.stderr, end='', file=sys.stderr)
+            sys.exit(0 if cleanup_result.returncode == 0 else 1)
         except Exception as e:
             print(f"Error running cleanup: {e}", file=sys.stderr)
             sys.exit(1)
