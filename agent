@@ -215,8 +215,10 @@ try:
             
             if result.success:
                 if result.output:
-                    newline_char = '\\n'
-                    print(result.output, end='' if result.output.endswith(newline_char) else newline_char)
+                    if result.output.endswith(chr(10)):
+                        print(result.output, end='')
+                    else:
+                        print(result.output)
             else:
                 print(f"Error: {{result.error}}", file=sys.stderr)
 except Exception as e:
