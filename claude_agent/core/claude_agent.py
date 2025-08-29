@@ -347,6 +347,7 @@ class ClaudeAgent:
                     if result.success:
                         if attempt > 0:
                             logger.info(f"Code executed successfully after {attempt + 1} attempts")
+                            print(f"\n✅ Success! Fixed code executed correctly (attempt {attempt + 1}/{max_attempts})")
                         # Clean up error file if successful
                         if error_file_path:
                             try:
