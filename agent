@@ -193,7 +193,8 @@ except Exception as e:
     sys.exit(1)
 
 # Process request
-request = r'''{request.replace("'", "\\'")}'''
+escaped_request = r'''{request}'''.replace("'", "\\'")
+request = escaped_request
 debug = {os.getenv('AGENT_DEBUG', '').lower() in ('1', 'true', 'yes')}
 try:
     response, results = agent.process_request(request)
