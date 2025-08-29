@@ -426,17 +426,21 @@ class ClaudeAgent:
                             for block in fixed_blocks:
                                 if block.normalized_language == language:
                                     current_code = block.code
+                                    print(f"🔄 Retrying with fixed code...")
                                     break
                             else:
                                 # No matching language block found
                                 logger.warning("No fixed code block found in Claude's response")
+                                print(f"⚠️  No {language} code block found in fix response")
                                 break
                         else:
                             logger.warning("No code blocks found in fix response")
+                            print(f"⚠️  No code blocks found in Claude's response")
                             break
                             
                     except Exception as e:
                         logger.error(f"Error getting fix from Claude: {e}")
+                        print(f"❌ Error communicating with Claude: {e}")
                         break
                         
                 finally:
