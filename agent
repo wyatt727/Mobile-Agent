@@ -215,9 +215,9 @@ try:
                 if result.output:
                     print(result.output, end='' if result.output.endswith('\\n') else '\\n')
             else:
-                print(f"Error: {result.error}", file=sys.stderr)
+                print(f"Error: {{result.error}}", file=sys.stderr)
 except Exception as e:
-    print(f"Error processing request: {e}", file=sys.stderr)
+    print(f"Error processing request: {{e}}", file=sys.stderr)
     if debug:
         import traceback
         traceback.print_exc(file=sys.stderr)
