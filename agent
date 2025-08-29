@@ -273,10 +273,11 @@ def main():
         try:
             # Ensure we're using the venv Python for consistency
             venv_python = ensure_venv()
-            cleanup_script = """
+            cleanup_script = f"""
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent))
+agent_dir = r'{Path(__file__).parent}'
+sys.path.insert(0, agent_dir)
 
 from claude_agent.core.agent_cleanup import AgentCleanup
 
