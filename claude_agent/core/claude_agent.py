@@ -633,6 +633,24 @@ Return your solution as executable {language} code block(s), following the langu
         """
         self.conversation.export_markdown(file_path)
     
+    def cleanup_servers(self, force: bool = False) -> dict:
+        """
+        Clean up all web servers started by the agent.
+        
+        Args:
+            force: If True, skip confirmation prompt
+            
+        Returns:
+            Dictionary with cleanup statistics
+        """
+        try:
+            from claude_agent.core.agent_cleanup import AgentCleanup
+            cleanup = AgentCleanup()
+            return cleanup.kill_all_agent_servers(interactive=not force)
+        except Exception as e:
+            logger.error(f"Failed to clean up servers: {e}")
+            return {'error': str(e)}
+    
     def __repr__(self) -> str:
         """String representation."""
         return (
