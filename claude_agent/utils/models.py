@@ -29,6 +29,9 @@ class CodeLanguage(Enum):
     SH = "sh"
     JAVASCRIPT = "javascript"
     JS = "js"
+    HTML = "html"
+    ANDROID = "android"
+    ANDROID_ROOT = "android-root"
     
     @classmethod
     def normalize(cls, language: str) -> str:
