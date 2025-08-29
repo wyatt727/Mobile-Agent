@@ -210,7 +210,8 @@ try:
         
         for i, result in enumerate(results):
             if len(results) > 1:
-                print("\\n[Block " + str(i+1) + "]")
+                print("")
+                print("[Block " + str(i+1) + "]")
             
             if result.success:
                 if result.output:
