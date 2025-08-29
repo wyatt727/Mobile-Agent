@@ -287,11 +287,11 @@ result = cleanup.kill_all_agent_servers(interactive=False)
 if result.get('servers_found', 0) == 0:
     print("No active agent servers found")
 else:
-    print(f"Killed {result['killed']} servers")
+    print(f"Killed {{result['killed']}} servers")
     if result.get('directories_cleaned', 0) > 0:
-        print(f"Cleaned {result['directories_cleaned']} directories")
+        print(f"Cleaned {{result['directories_cleaned']}} directories")
     if result.get('freed_ports'):
-        print(f"Freed ports: {', '.join(map(str, sorted(result['freed_ports'])))}")
+        print(f"Freed ports: {{', '.join(map(str, sorted(result['freed_ports'])))}}")
 """
             cleanup_result = subprocess.run(
                 [str(venv_python), "-c", cleanup_script],
