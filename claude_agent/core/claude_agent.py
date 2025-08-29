@@ -277,7 +277,8 @@ class ClaudeAgent:
         self,
         code: str,
         language: str,
-        max_attempts: int = 3
+        max_attempts: int = 3,
+        original_request: str = ""
     ) -> ExecutionResult:
         """
         Execute code with automatic fixing attempts on failure.
