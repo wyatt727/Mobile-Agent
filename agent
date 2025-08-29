@@ -213,7 +213,8 @@ try:
             
             if result.success:
                 if result.output:
-                    print(result.output, end='' if result.output.endswith('\\n') else '\\n')
+                    newline_char = '\\n'
+                    print(result.output, end='' if result.output.endswith(newline_char) else newline_char)
             else:
                 print(f"Error: {{result.error}}", file=sys.stderr)
 except Exception as e:
