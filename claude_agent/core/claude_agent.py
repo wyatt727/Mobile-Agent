@@ -358,7 +358,9 @@ class ClaudeAgent:
                     
                     # Ask Claude to fix the code
                     logger.info(f"Attempting to fix code (attempt {attempt + 1}/{max_attempts})")
-                    fix_prompt = self._build_fix_prompt(current_code, result, language, error_file_path)
+                    fix_prompt = self._build_fix_prompt(
+                        current_code, result, language, error_file_path, original_request
+                    )
                     
                     try:
                         # Get fixed code from Claude
