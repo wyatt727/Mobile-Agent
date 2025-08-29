@@ -2,6 +2,7 @@
 """
 Advanced Web Deployment System for NetHunter Agent
 Handles single and multi-file deployments with database support
+Enhanced with audio service protection and process isolation
 """
 import os
 import subprocess
@@ -10,8 +11,10 @@ import time
 import json
 import sqlite3
 import logging
+import signal
+import psutil
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Set
 import shutil
 
 logger = logging.getLogger(__name__)
@@ -25,6 +28,20 @@ class WebDeploymentManager:
         self.timeout = timeout
         self.deployments = {}  # Track active deployments
         self.base_port = 8080
+        
+        # Reserved ports for audio and system services
+        self.reserved_ports: Set[int] = {
+            4713,  # PulseAudio TCP
+            8000,  # NetHunter Audio Manager
+            4712,  # PulseAudio native protocol
+            6600,  # MPD (Music Player Daemon)
+            8001,  # Alternative audio streaming
+        }
+        
+        # Track our process groups for safe cleanup
+        self.process_groups = {}  # timestamp -> pgid mapping
+        
+        logger.info(f"WebDeploymentManager initialized with reserved ports: {self.reserved_ports}")
         
     def deploy_web_app(self, 
                        html_content: str = None,
@@ -144,14 +161,20 @@ class WebDeploymentManager:
         port = self._find_available_port()
         
         try:
-            # Start server in background
+            # Start server in background with process isolation
             server_process = subprocess.Popen(
                 ['python3', '-m', 'http.server', str(port)],
                 cwd=deploy_dir,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
+                stdout=subprocess.DEVNULL,  # Avoid stdout competition
+                stderr=subprocess.DEVNULL,  # Avoid stderr competition
+                text=True,
+                start_new_session=True,  # Create new process group
+                preexec_fn=os.setsid  # Ensure complete isolation
             )
+            
+            # Store process group ID for safe cleanup
+            pgid = os.getpgid(server_process.pid)
+            self.process_groups[deployment_info['timestamp']] = pgid
             
             # Give server time to start
             time.sleep(1)
@@ -265,14 +288,20 @@ if __name__ == '__main__':
                 capture_output=True
             )
             
-            # Start Flask server
+            # Start Flask server with process isolation
             server_process = subprocess.Popen(
                 ['python3', 'app.py'],
                 cwd=deploy_dir,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
+                stdout=subprocess.DEVNULL,  # Avoid stdout competition
+                stderr=subprocess.DEVNULL,  # Avoid stderr competition
+                text=True,
+                start_new_session=True,  # Create new process group
+                preexec_fn=os.setsid  # Ensure complete isolation
             )
+            
+            # Store process group ID for safe cleanup
+            pgid = os.getpgid(server_process.pid)
+            self.process_groups[deployment_info['timestamp']] = pgid
             
             # Wait for server to start
             time.sleep(2)
@@ -350,51 +379,173 @@ if __name__ == '__main__':
             logger.warning(f"Access setup failed: {e}")
     
     def _find_available_port(self, start: int = None) -> int:
-        """Find an available port"""
+        """Find an available port, avoiding audio service ports"""
         import socket
         
         if start is None:
             start = self.base_port
         
+        # Ensure we don't start in reserved range
+        while start in self.reserved_ports:
+            start += 1
+        
         for port in range(start, start + 100):
+            # Skip reserved audio ports
+            if port in self.reserved_ports:
+                logger.debug(f"Skipping reserved audio port {port}")
+                continue
+            
+            # Check if port is actually available
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 try:
                     sock.bind(('', port))
+                    logger.info(f"Found available port {port} (avoided audio ports)")
                     return port
                 except OSError:
                     continue
         
-        return start  # Fallback
+        # Fallback with warning
+        logger.warning(f"Could not find free port, using {start + 100}")
+        return start + 100
     
     def stop_deployment(self, timestamp: int) -> bool:
-        """Stop a deployment and clean up"""
+        """Stop a deployment and clean up safely without affecting audio services"""
         if timestamp not in self.deployments:
             return False
         
         deployment = self.deployments[timestamp]
         
-        # Kill server process
+        # Safe process termination with verification
         if 'pid' in deployment:
             try:
-                subprocess.run(['kill', str(deployment['pid'])], timeout=5)
-                logger.info(f"Stopped server PID {deployment['pid']}")
-            except:
-                pass
+                # Verify process belongs to us before killing
+                if self._verify_our_process(deployment['pid'], timestamp):
+                    # Kill entire process group to clean up properly
+                    if timestamp in self.process_groups:
+                        pgid = self.process_groups[timestamp]
+                        try:
+                            # Send SIGTERM to process group for graceful shutdown
+                            os.killpg(pgid, signal.SIGTERM)
+                            logger.info(f"Sent SIGTERM to process group {pgid}")
+                            
+                            # Give processes time to clean up
+                            time.sleep(0.5)
+                            
+                            # Force kill if still running
+                            try:
+                                os.killpg(pgid, signal.SIGKILL)
+                                logger.info(f"Force killed process group {pgid}")
+                            except ProcessLookupError:
+                                pass  # Already terminated
+                                
+                            del self.process_groups[timestamp]
+                        except Exception as e:
+                            logger.warning(f"Error killing process group: {e}")
+                            # Fallback to individual process
+                            subprocess.run(['kill', '-TERM', str(deployment['pid'])], 
+                                         timeout=2, capture_output=True)
+                    else:
+                        # Fallback for older deployments
+                        subprocess.run(['kill', '-TERM', str(deployment['pid'])], 
+                                     timeout=2, capture_output=True)
+                    
+                    logger.info(f"Stopped server PID {deployment['pid']}")
+                else:
+                    logger.warning(f"PID {deployment['pid']} does not belong to our deployment")
+            except Exception as e:
+                logger.error(f"Error stopping process: {e}")
         
         # Clean up directory
         if 'directory' in deployment:
             try:
                 shutil.rmtree(deployment['directory'])
                 logger.info(f"Removed {deployment['directory']}")
-            except:
-                pass
+            except Exception as e:
+                logger.warning(f"Could not remove directory: {e}")
         
         del self.deployments[timestamp]
         return True
     
+    def _verify_our_process(self, pid: int, timestamp: int) -> bool:
+        """Verify that a PID belongs to our deployment and not audio services"""
+        try:
+            # Check if process exists
+            if not psutil.pid_exists(pid):
+                return False
+            
+            proc = psutil.Process(pid)
+            
+            # Get process command line
+            cmdline = ' '.join(proc.cmdline())
+            
+            # Check if it's an audio-related process (safety check)
+            audio_keywords = ['pulse', 'audio', 'kex-audio', 'termux-audio', 
+                            'paplay', 'pactl', 'pacmd', 'mpd', 'alsa']
+            if any(keyword in cmdline.lower() for keyword in audio_keywords):
+                logger.warning(f"PID {pid} appears to be an audio service, refusing to kill")
+                return False
+            
+            # Check if it's a web server process
+            web_keywords = ['http.server', 'flask', 'app.py', 'python3']
+            if any(keyword in cmdline for keyword in web_keywords):
+                # Additional check: verify working directory matches deployment
+                deployment = self.deployments.get(timestamp)
+                if deployment and 'directory' in deployment:
+                    try:
+                        proc_cwd = proc.cwd()
+                        if deployment['directory'] in proc_cwd:
+                            return True
+                    except (psutil.AccessDenied, psutil.NoSuchProcess):
+                        pass
+                
+                # If we started it with our process group, it's ours
+                if timestamp in self.process_groups:
+                    try:
+                        pgid = os.getpgid(pid)
+                        if pgid == self.process_groups[timestamp]:
+                            return True
+                    except:
+                        pass
+            
+            return False
+            
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            return False
+    
     def list_deployments(self) -> List[Dict[str, Any]]:
         """List all active deployments"""
+        # Clean up any dead deployments first
+        self._cleanup_dead_deployments()
         return list(self.deployments.values())
+    
+    def _cleanup_dead_deployments(self):
+        """Remove deployments with dead processes"""
+        dead_timestamps = []
+        for timestamp, deployment in self.deployments.items():
+            if 'pid' in deployment:
+                if not psutil.pid_exists(deployment['pid']):
+                    dead_timestamps.append(timestamp)
+                    logger.info(f"Found dead deployment {timestamp}, cleaning up")
+        
+        for timestamp in dead_timestamps:
+            # Clean up directory only, process already dead
+            deployment = self.deployments[timestamp]
+            if 'directory' in deployment:
+                try:
+                    shutil.rmtree(deployment['directory'])
+                except:
+                    pass
+            del self.deployments[timestamp]
+            if timestamp in self.process_groups:
+                del self.process_groups[timestamp]
+    
+    def shutdown_all(self):
+        """Safely shutdown all deployments"""
+        logger.info("Shutting down all web deployments...")
+        timestamps = list(self.deployments.keys())
+        for timestamp in timestamps:
+            self.stop_deployment(timestamp)
+        logger.info("All web deployments stopped")
 
 # Global instance
 _manager = None
