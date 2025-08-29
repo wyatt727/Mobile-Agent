@@ -72,6 +72,10 @@ class ClaudeAgent:
             re.DOTALL | re.IGNORECASE
         )
         
+        # Store the installation directory for prompt file references
+        import os
+        self.install_dir = Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        
         # Load system prompt if configured (only for non-Claude providers)
         # Claude CLI uses --append-system-prompt flag instead
         if not isinstance(self.llm, ClaudeCodeProvider):
