@@ -22,7 +22,7 @@ class LanguageExecutor:
     # Class-level list to keep server processes alive
     _active_servers = []
     
-    def __init__(self, timeout: int = 60):
+    def __init__(self, timeout: int = 120):
         """
         Initialize Language Executor.
         
