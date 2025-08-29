@@ -5,6 +5,7 @@ Handles single and multi-file deployments with database support
 Enhanced with audio service protection and process isolation
 """
 import os
+import sys
 import subprocess
 import tempfile
 import time
@@ -162,19 +163,35 @@ class WebDeploymentManager:
         
         try:
             # Start server in background with process isolation
-            server_process = subprocess.Popen(
-                ['python3', '-m', 'http.server', str(port)],
-                cwd=deploy_dir,
-                stdout=subprocess.DEVNULL,  # Avoid stdout competition
-                stderr=subprocess.DEVNULL,  # Avoid stderr competition
-                text=True,
-                start_new_session=True,  # Create new process group
-                preexec_fn=os.setsid  # Ensure complete isolation
-            )
+            # On macOS, use start_new_session OR preexec_fn, not both
+            if sys.platform == 'darwin':
+                server_process = subprocess.Popen(
+                    ['python3', '-m', 'http.server', str(port)],
+                    cwd=deploy_dir,
+                    stdout=subprocess.DEVNULL,  # Avoid stdout competition
+                    stderr=subprocess.DEVNULL,  # Avoid stderr competition
+                    text=True,
+                    start_new_session=True  # Create new process group
+                )
+            else:
+                # On Linux/NetHunter, use both for complete isolation
+                server_process = subprocess.Popen(
+                    ['python3', '-m', 'http.server', str(port)],
+                    cwd=deploy_dir,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    text=True,
+                    start_new_session=True,
+                    preexec_fn=os.setsid
+                )
             
             # Store process group ID for safe cleanup
-            pgid = os.getpgid(server_process.pid)
-            self.process_groups[deployment_info['timestamp']] = pgid
+            try:
+                pgid = os.getpgid(server_process.pid)
+                self.process_groups[deployment_info['timestamp']] = pgid
+            except:
+                # Fallback if we can't get pgid
+                self.process_groups[deployment_info['timestamp']] = server_process.pid
             
             # Give server time to start
             time.sleep(1)
@@ -289,19 +306,35 @@ if __name__ == '__main__':
             )
             
             # Start Flask server with process isolation
-            server_process = subprocess.Popen(
-                ['python3', 'app.py'],
-                cwd=deploy_dir,
-                stdout=subprocess.DEVNULL,  # Avoid stdout competition
-                stderr=subprocess.DEVNULL,  # Avoid stderr competition
-                text=True,
-                start_new_session=True,  # Create new process group
-                preexec_fn=os.setsid  # Ensure complete isolation
-            )
+            # On macOS, use start_new_session OR preexec_fn, not both
+            if sys.platform == 'darwin':
+                server_process = subprocess.Popen(
+                    ['python3', 'app.py'],
+                    cwd=deploy_dir,
+                    stdout=subprocess.DEVNULL,  # Avoid stdout competition
+                    stderr=subprocess.DEVNULL,  # Avoid stderr competition
+                    text=True,
+                    start_new_session=True  # Create new process group
+                )
+            else:
+                # On Linux/NetHunter, use both for complete isolation
+                server_process = subprocess.Popen(
+                    ['python3', 'app.py'],
+                    cwd=deploy_dir,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    text=True,
+                    start_new_session=True,
+                    preexec_fn=os.setsid
+                )
             
             # Store process group ID for safe cleanup
-            pgid = os.getpgid(server_process.pid)
-            self.process_groups[deployment_info['timestamp']] = pgid
+            try:
+                pgid = os.getpgid(server_process.pid)
+                self.process_groups[deployment_info['timestamp']] = pgid
+            except:
+                # Fallback if we can't get pgid
+                self.process_groups[deployment_info['timestamp']] = server_process.pid
             
             # Wait for server to start
             time.sleep(2)
