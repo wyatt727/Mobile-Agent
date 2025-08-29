@@ -362,8 +362,11 @@ class ClaudeAgent:
                     
                     # Ask Claude to fix the code
                     logger.info(f"Attempting to fix code (attempt {attempt + 1}/{max_attempts})")
+                    # Only reference error file on attempt 3+ (attempt >= 1) when it contains useful history
+                    # Attempt 0 = initial, Attempt 1 = second request, Attempt 2 = third request
+                    error_file_ref = error_file_path if attempt >= 1 else None
                     fix_prompt = self._build_fix_prompt(
-                        current_code, result, language, error_file_path, original_request
+                        current_code, result, language, error_file_ref, original_request
                     )
                     
                     try:
@@ -507,7 +510,7 @@ Please read and follow these system prompts for proper execution:
         
         if is_web_request:
             prompt += f"""
-@{webdev_prompt_path}"""
+Follow these instructions for web development: @{webdev_prompt_path}"""
         
         # Add the original user request to maintain focus on the goal
         prompt += f"""
