@@ -358,7 +358,26 @@ class ClaudeAgent:
                     # Don't retry if we've reached max attempts
                     if attempt >= max_attempts - 1:
                         logger.warning(f"Code execution failed after {max_attempts} attempts")
+                        print(f"\n❌ Execution failed after {max_attempts} attempts")
+                        if error_file_path:
+                            print(f"📝 Error history saved to: {error_file_path}")
                         break
+                    
+                    # Show user what happened and that we're retrying
+                    print(f"\n{'='*60}")
+                    print(f"⚠️  Execution Failed (Attempt {attempt + 1}/{max_attempts})")
+                    print(f"{'='*60}")
+                    
+                    # Show the error output
+                    error_display = result.error or result.output or "Unknown error"
+                    if len(error_display) > 500:
+                        error_display = error_display[:500] + "..."
+                    print(f"Error: {error_display}")
+                    print(f"Return code: {result.return_code}")
+                    
+                    # Show that we're attempting to fix
+                    print(f"\n🔧 Attempting automatic fix (Retry {attempt + 1}/{max_attempts - 1})")
+                    print(f"⏱️  Timeout for next attempt: {timeout}s")
                     
                     # Ask Claude to fix the code
                     logger.info(f"Attempting to fix code (attempt {attempt + 1}/{max_attempts})")
@@ -369,9 +388,17 @@ class ClaudeAgent:
                         current_code, result, language, error_file_ref, original_request
                     )
                     
+                    # Show a preview of what we're asking Claude
+                    print(f"\n📤 Sending fix request to Claude...")
+                    if error_file_ref:
+                        print(f"   Including error history from: {error_file_ref}")
+                    print(f"   Context: Original request + error output + execution details")
+                    
                     try:
                         # Get fixed code from Claude
+                        print(f"⏳ Waiting for Claude's response...")
                         fixed_response = self.llm.get_response(fix_prompt)
+                        print(f"✅ Received fix from Claude")
                         
                         # Log fix interaction to error history
                         if error_file_path:
