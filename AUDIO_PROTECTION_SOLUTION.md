@@ -122,12 +122,43 @@ logging.basicConfig(level=logging.INFO)
 3. Process priority management
 4. Audio latency optimization
 
+## How Web Apps Can Still Play Audio
+
+The solution preserves audio capabilities through multiple mechanisms:
+
+### Client-Side (Browser) Audio
+- HTML5 `<audio>` elements work normally
+- Web Audio API functions properly
+- Browser connects directly to PulseAudio
+- WebRTC and streaming audio supported
+
+### Server-Side (Backend) Audio
+- Flask/Python processes inherit PULSE_SERVER environment
+- Can execute audio commands: `paplay`, `pactl`, `pacmd`
+- Can generate audio files and stream them
+- Can connect to PulseAudio for processing
+
+### Example Web App with Audio
+```python
+# Backend can play system sounds
+subprocess.run(['paplay', '/usr/share/sounds/bell.oga'], env=os.environ)
+
+# Frontend can use Web Audio API
+const audioContext = new AudioContext();
+const oscillator = audioContext.createOscillator();
+oscillator.frequency.value = 440;
+oscillator.connect(audioContext.destination);
+oscillator.start();
+```
+
 ## Summary
 
-This solution ensures web app deployments never interfere with audio services by:
+This solution ensures web app deployments never interfere with audio services while **preserving full audio capabilities**:
 - **Preventing** port conflicts through reservation
-- **Isolating** processes in separate groups
+- **Isolating** processes in separate groups  
 - **Protecting** audio PIDs from termination
+- **Preserving** PULSE_SERVER environment for audio access
 - **Monitoring** service health continuously
+- **Maintaining** both client and server audio functionality
 
-The implementation is robust, platform-aware, and handles edge cases gracefully.
+The implementation is robust, platform-aware, and handles edge cases gracefully. Web apps can still play audio through both browser APIs and backend processes.
