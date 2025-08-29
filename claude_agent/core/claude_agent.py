@@ -306,7 +306,7 @@ class ClaudeAgent:
         try:
             for attempt in range(max_attempts):
                 # Calculate progressive timeout: base + (90s * attempt)
-                # Attempt 0: 60s, Attempt 1: 150s, Attempt 2: 240s (4min), etc.
+                # Attempt 0: 120s, Attempt 1: 210s, Attempt 2: 300s (5min)
                 timeout = self.config.execution_timeout + (90 * attempt)
                 if timeout > 300:  # Cap at 5 minutes
                     timeout = 300
