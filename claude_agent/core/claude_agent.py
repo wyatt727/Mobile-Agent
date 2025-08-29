@@ -80,6 +80,74 @@ class ClaudeAgent:
         
         logger.info("Claude Agent initialized")
     
+    def _create_error_history_file(self) -> str:
+        """
+        Create a temporary error history file for tracking retry attempts.
+        
+        Returns:
+            Path to the error history file
+        """
+        error_file = tempfile.NamedTemporaryFile(mode='w+', suffix='_errors.txt', delete=False)
+        error_file.close()
+        return error_file.name
+    
+    def _log_execution_attempt(
+        self, 
+        error_file_path: str,
+        attempt: int,
+        original_request: str,
+        code: str,
+        language: str,
+        result: ExecutionResult,
+        fix_prompt: Optional[str] = None,
+        fix_response: Optional[str] = None
+    ):
+        """
+        Log detailed execution attempt information to error history file.
+        
+        Args:
+            error_file_path: Path to error history file
+            attempt: Attempt number (0-based)
+            original_request: Original user request
+            code: Code that was executed
+            language: Programming language
+            result: Execution result
+            fix_prompt: Fix prompt sent to Claude (if any)
+            fix_response: Claude's fix response (if any)
+        """
+        try:
+            with open(error_file_path, 'a', encoding='utf-8') as f:
+                f.write(f"\n{'='*80}\n")
+                f.write(f"EXECUTION ATTEMPT {attempt + 1}\n")
+                f.write(f"Timestamp: {datetime.now().isoformat()}\n")
+                f.write(f"Language: {language}\n")
+                f.write(f"Success: {result.success}\n")
+                f.write(f"Return Code: {result.return_code}\n")
+                f.write(f"Execution Time: {result.execution_time}s\n")
+                f.write(f"{'='*80}\n")
+                
+                if attempt == 0:
+                    f.write(f"ORIGINAL REQUEST:\n{original_request}\n\n")
+                
+                f.write(f"CODE EXECUTED:\n```{language}\n{code}\n```\n\n")
+                
+                if result.output:
+                    f.write(f"STDOUT OUTPUT:\n{result.output}\n\n")
+                
+                if result.error:
+                    f.write(f"STDERR OUTPUT:\n{result.error}\n\n")
+                
+                if fix_prompt:
+                    f.write(f"FIX PROMPT SENT:\n{fix_prompt}\n\n")
+                
+                if fix_response:
+                    f.write(f"CLAUDE'S FIX RESPONSE:\n{fix_response}\n\n")
+                
+                f.write(f"\n")
+                
+        except Exception as e:
+            logger.warning(f"Failed to log execution attempt: {e}")
+    
     def _create_llm_provider(self) -> LLMProvider:
         """Create the appropriate LLM provider based on configuration."""
         try:
