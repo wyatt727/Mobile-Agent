@@ -261,6 +261,47 @@ def main():
         print("Claude Agent v2.0")
         sys.exit(0)
     
+    # Handle kill command to clean up web servers
+    if request in ["kill", "cleanup", "kill-servers"]:
+        print("Cleaning up Claude Agent web servers...")
+        # Import and run cleanup
+        try:
+            # Ensure we're using the venv Python for consistency
+            venv_python = ensure_venv()
+            cleanup_script = """
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent))
+
+from claude_agent.core.agent_cleanup import AgentCleanup
+
+cleanup = AgentCleanup()
+result = cleanup.kill_all_agent_servers(interactive=False)
+
+if result.get('servers_found', 0) == 0:
+    print("No active agent servers found")
+else:
+    print(f"Killed {result['killed']} servers")
+    if result.get('directories_cleaned', 0) > 0:
+        print(f"Cleaned {result['directories_cleaned']} directories")
+    if result.get('freed_ports'):
+        print(f"Freed ports: {', '.join(map(str, sorted(result['freed_ports'])))}")
+"""
+            result = subprocess.run(
+                [str(venv_python), "-c", cleanup_script],
+                capture_output=True,
+                text=True,
+                cwd=Path(__file__).parent
+            )
+            if result.stdout:
+                print(result.stdout, end='')
+            if result.stderr and "import" not in result.stderr:  # Ignore import warnings
+                print(result.stderr, end='', file=sys.stderr)
+            sys.exit(0 if result.returncode == 0 else 1)
+        except Exception as e:
+            print(f"Error running cleanup: {e}", file=sys.stderr)
+            sys.exit(1)
+    
     # Ensure venv is set up
     venv_python = ensure_venv()
     
