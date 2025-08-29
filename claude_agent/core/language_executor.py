@@ -285,14 +285,26 @@ class LanguageExecutor:
             log_file = web_dir / 'server.log'
             
             # Start server process with complete isolation
-            server_process = subprocess.Popen(
-                ['python3', '-m', 'http.server', str(port)],
-                cwd=str(web_dir),
-                stdout=subprocess.DEVNULL,  # Avoid stdout competition with audio
-                stderr=subprocess.DEVNULL,  # Avoid stderr competition
-                start_new_session=True,  # Creates new session for independence
-                preexec_fn=os.setsid  # Complete process group isolation
-            )
+            # Platform-specific process isolation
+            if sys.platform == 'darwin':
+                # macOS: use only start_new_session
+                server_process = subprocess.Popen(
+                    ['python3', '-m', 'http.server', str(port)],
+                    cwd=str(web_dir),
+                    stdout=subprocess.DEVNULL,  # Avoid stdout competition with audio
+                    stderr=subprocess.DEVNULL,  # Avoid stderr competition
+                    start_new_session=True  # Creates new session for independence
+                )
+            else:
+                # Linux/NetHunter: use both for complete isolation
+                server_process = subprocess.Popen(
+                    ['python3', '-m', 'http.server', str(port)],
+                    cwd=str(web_dir),
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    start_new_session=True,
+                    preexec_fn=os.setsid  # Complete process group isolation
+                )
             
             # Store server process to keep it alive
             LanguageExecutor._active_servers.append({
