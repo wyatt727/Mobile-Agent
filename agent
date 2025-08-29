@@ -209,7 +209,7 @@ try:
         
         for i, result in enumerate(results):
             if len(results) > 1:
-                print(f"\\n[Block {i+1}]")
+                print(f"\\n[Block {{i+1}}]")
             
             if result.success:
                 if result.output:
