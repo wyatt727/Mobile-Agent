@@ -496,15 +496,18 @@ class ClaudeAgent:
             'browser', 'deploy', 'server', 'css', 'javascript'
         ])
         
-        # Start with system context references
-        prompt = """IMPORTANT CONTEXT: You are operating within a NetHunter chroot environment.
+        # Start with system context references using absolute paths
+        nethunter_prompt_path = self.install_dir / "claude_agent" / "prompt" / "nethunter-system-prompt-v3.md"
+        webdev_prompt_path = self.install_dir / "claude_agent" / "prompt" / "WebDev_Claude.md"
+        
+        prompt = f"""IMPORTANT CONTEXT: You are operating within a NetHunter chroot environment.
 
 Please read and follow these system prompts for proper execution:
-@claude_agent/prompt/nethunter-system-prompt-v3.md"""
+@{nethunter_prompt_path}"""
         
         if is_web_request:
-            prompt += """
-@claude_agent/prompt/WebDev_Claude.md"""
+            prompt += f"""
+@{webdev_prompt_path}"""
         
         # Add the original user request to maintain focus on the goal
         prompt += f"""
