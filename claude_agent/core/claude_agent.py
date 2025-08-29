@@ -251,7 +251,8 @@ class ClaudeAgent:
             result = self.execute_with_retry(
                 code_block.code,
                 code_block.language,
-                max_attempts=self.config.max_fix_attempts
+                max_attempts=self.config.max_fix_attempts,
+                original_request=user_input
             )
             
             execution_results.append(result)
