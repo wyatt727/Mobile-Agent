@@ -14,10 +14,12 @@ Web app generation was potentially interfering with audio services in NetHunter 
 - Web deployments automatically skip these ports
 - Port selection algorithm checks availability before binding
 
-### 2. Process Isolation
+### 2. Process Isolation with Audio Support
 - Web servers run in separate process groups using `start_new_session=True`
 - Platform-specific handling (macOS vs Linux/NetHunter)
-- stdout/stderr redirected to DEVNULL to prevent competition
+- **stdout/stderr redirected to log files** (not DEVNULL) to preserve debugging
+- **PULSE_SERVER environment variable preserved** for audio connectivity
+- Web apps can still access PulseAudio at tcp:127.0.0.1:4713
 
 ### 3. Safe Process Termination
 - PID verification before killing processes
@@ -30,6 +32,12 @@ Web app generation was potentially interfering with audio services in NetHunter 
 - Tracks protected PIDs
 - Health checking and diagnostics
 - Automatic restart capability
+
+### 5. Audio Capability Preservation
+- **Environment inheritance**: PULSE_SERVER passed to subprocesses
+- **Log files instead of DEVNULL**: Preserves output while avoiding competition
+- **Web Audio API support**: Browser can connect to PulseAudio
+- **Backend audio access**: Flask/Python can use pactl, paplay, etc.
 
 ## Key Files Modified
 
