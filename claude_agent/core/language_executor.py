@@ -256,31 +256,43 @@ class LanguageExecutor:
             
             # Find a truly available port
             def find_free_port():
-                for _ in range(10):
+                # Reserved audio service ports to avoid
+                reserved_ports = {4713, 8000, 4712, 6600, 8001}
+                
+                for _ in range(20):  # More attempts
                     port = random.randint(8080, 9000)
+                    
+                    # Skip reserved audio ports
+                    if port in reserved_ports:
+                        continue
+                    
                     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                         try:
                             s.bind(('', port))
                             s.close()
+                            logger.info(f"Found free port {port} (avoided audio ports)")
                             return port
                         except:
                             continue
-                return 8080  # Fallback
+                
+                # Fallback to a safe port
+                logger.warning("Using fallback port 9090")
+                return 9090
             
             port = find_free_port()
             
             # Start web server detached to survive parent exit
             log_file = web_dir / 'server.log'
             
-            # Start server process independently
-            with open(log_file, 'w') as log:
-                server_process = subprocess.Popen(
-                    ['python3', '-m', 'http.server', str(port)],
-                    cwd=str(web_dir),
-                    stdout=log,
-                    stderr=subprocess.STDOUT,
-                    start_new_session=True  # Creates new session for independence
-                )
+            # Start server process with complete isolation
+            server_process = subprocess.Popen(
+                ['python3', '-m', 'http.server', str(port)],
+                cwd=str(web_dir),
+                stdout=subprocess.DEVNULL,  # Avoid stdout competition with audio
+                stderr=subprocess.DEVNULL,  # Avoid stderr competition
+                start_new_session=True,  # Creates new session for independence
+                preexec_fn=os.setsid  # Complete process group isolation
+            )
             
             # Store server process to keep it alive
             LanguageExecutor._active_servers.append({
