@@ -282,90 +282,148 @@ class ClaudeAgent:
     ) -> ExecutionResult:
         """
         Execute code with automatic fixing attempts on failure.
+        Enhanced with error history logging and progressive timeouts.
         
         Args:
             code: Code to execute
             language: Programming language
             max_attempts: Maximum number of fix attempts
+            original_request: Original user request for context
             
         Returns:
             Final execution result
         """
         current_code = code
         last_result = None
+        error_file_path = None
         
-        for attempt in range(max_attempts):
-            # Execute code
-            # Execute code and create ExecutionResult
-            success, stdout, stderr = self.executor.execute(current_code, language)
-            result = ExecutionResult(
-                success=success,
-                output=stdout,
-                error=stderr,
-                return_code=0 if success else 1,  # Default return codes
-                language=language,
-                execution_time=0.0  # LanguageExecutor doesn't track time
-            )
-            last_result = result
-            
-            # Return if successful
-            if result.success:
-                if attempt > 0:
-                    logger.info(f"Code executed successfully after {attempt + 1} attempts")
-                return result
-            
-            # Don't retry if we've reached max attempts
-            if attempt >= max_attempts - 1:
-                logger.warning(f"Code execution failed after {max_attempts} attempts")
-                break
-            
-            # Ask Claude to fix the code
-            logger.info(f"Attempting to fix code (attempt {attempt + 1}/{max_attempts})")
-            fix_prompt = self._build_fix_prompt(current_code, result, language)
-            
-            try:
-                # Get fixed code from Claude
-                fixed_response = self.llm.get_response(fix_prompt)
+        # Create error history file for retry attempts
+        if max_attempts > 1:
+            error_file_path = self._create_error_history_file()
+            logger.info(f"Created error history file: {error_file_path}")
+        
+        try:
+            for attempt in range(max_attempts):
+                # Calculate progressive timeout: base + (90s * attempt)
+                # Attempt 0: 60s, Attempt 1: 150s, Attempt 2: 240s (4min), etc.
+                timeout = self.config.execution_timeout + (90 * attempt)
+                if timeout > 300:  # Cap at 5 minutes
+                    timeout = 300
                 
-                # Add fix interaction to conversation
-                self.conversation.add_message(
-                    MessageRole.USER,
-                    fix_prompt,
-                    metadata={"type": "fix_request", "attempt": attempt + 1}
-                )
-                self.conversation.add_message(
-                    MessageRole.ASSISTANT,
-                    fixed_response,
-                    metadata={"type": "fix_response", "attempt": attempt + 1}
-                )
+                logger.info(f"Attempt {attempt + 1}/{max_attempts} with timeout {timeout}s")
                 
-                # Extract fixed code
-                fixed_blocks = self.extract_code_blocks(fixed_response)
-                if fixed_blocks:
-                    # Use the first code block of the same language
-                    for block in fixed_blocks:
-                        if block.normalized_language == language:
-                            current_code = block.code
-                            break
-                    else:
-                        # No matching language block found
-                        logger.warning("No fixed code block found in Claude's response")
-                        break
-                else:
-                    logger.warning("No code blocks found in fix response")
-                    break
+                # Temporarily update executor timeout for this attempt
+                original_timeout = self.executor.timeout
+                self.executor.timeout = timeout
+                
+                try:
+                    # Execute code
+                    start_time = time.time()
+                    success, stdout, stderr = self.executor.execute(current_code, language)
+                    execution_time = time.time() - start_time
                     
-            except Exception as e:
-                logger.error(f"Error getting fix from Claude: {e}")
-                break
+                    result = ExecutionResult(
+                        success=success,
+                        output=stdout,
+                        error=stderr,
+                        return_code=0 if success else 1,
+                        language=language,
+                        execution_time=execution_time
+                    )
+                    last_result = result
+                    
+                    # Log execution attempt to error history file
+                    if error_file_path:
+                        self._log_execution_attempt(
+                            error_file_path, attempt, original_request, 
+                            current_code, language, result
+                        )
+                    
+                    # Return if successful
+                    if result.success:
+                        if attempt > 0:
+                            logger.info(f"Code executed successfully after {attempt + 1} attempts")
+                        # Clean up error file if successful
+                        if error_file_path:
+                            try:
+                                Path(error_file_path).unlink(missing_ok=True)
+                            except:
+                                pass
+                        return result
+                    
+                    # Don't retry if we've reached max attempts
+                    if attempt >= max_attempts - 1:
+                        logger.warning(f"Code execution failed after {max_attempts} attempts")
+                        break
+                    
+                    # Ask Claude to fix the code
+                    logger.info(f"Attempting to fix code (attempt {attempt + 1}/{max_attempts})")
+                    fix_prompt = self._build_fix_prompt(current_code, result, language, error_file_path)
+                    
+                    try:
+                        # Get fixed code from Claude
+                        fixed_response = self.llm.get_response(fix_prompt)
+                        
+                        # Log fix interaction to error history
+                        if error_file_path:
+                            self._log_execution_attempt(
+                                error_file_path, attempt, original_request,
+                                current_code, language, result, fix_prompt, fixed_response
+                            )
+                        
+                        # Add fix interaction to conversation
+                        self.conversation.add_message(
+                            MessageRole.USER,
+                            fix_prompt,
+                            metadata={"type": "fix_request", "attempt": attempt + 1}
+                        )
+                        self.conversation.add_message(
+                            MessageRole.ASSISTANT,
+                            fixed_response,
+                            metadata={"type": "fix_response", "attempt": attempt + 1}
+                        )
+                        
+                        # Extract fixed code
+                        fixed_blocks = self.extract_code_blocks(fixed_response)
+                        if fixed_blocks:
+                            # Use the first code block of the same language
+                            for block in fixed_blocks:
+                                if block.normalized_language == language:
+                                    current_code = block.code
+                                    break
+                            else:
+                                # No matching language block found
+                                logger.warning("No fixed code block found in Claude's response")
+                                break
+                        else:
+                            logger.warning("No code blocks found in fix response")
+                            break
+                            
+                    except Exception as e:
+                        logger.error(f"Error getting fix from Claude: {e}")
+                        break
+                        
+                finally:
+                    # Restore original timeout
+                    self.executor.timeout = original_timeout
+            
+            return last_result or ExecutionResult(
+                success=False,
+                output="",
+                error="No execution attempted",
+                return_code=-1,
+                language=language
+            )
         
-        return last_result or ExecutionResult(
-            success=False,
-            output="",
-            error="No execution attempted",
-            return_code=-1,
-            language=language
-        )
+        finally:
+            # Clean up error file only if we succeeded, otherwise leave it for debugging
+            if error_file_path and last_result and last_result.success:
+                try:
+                    Path(error_file_path).unlink(missing_ok=True)
+                except:
+                    pass
+            elif error_file_path:
+                logger.info(f"Error history preserved at: {error_file_path}")
     
     def extract_code_blocks(self, text: str) -> List[CodeBlock]:
         """
