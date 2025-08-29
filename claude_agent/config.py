@@ -23,7 +23,7 @@ class AgentConfig:
     adb_path: str = "adb" # Path to ADB executable, assumes in PATH by default
     
     # Execution settings
-    execution_timeout: int = 60
+    execution_timeout: int = 120
     max_fix_attempts: int = 3
     track_dependencies: bool = True
     auto_install_packages: bool = True
