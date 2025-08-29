@@ -40,6 +40,12 @@ class CodeLanguage(Enum):
             return "shell"
         elif lang_lower in ["javascript", "js", "node"]:
             return "javascript"
+        elif lang_lower in ["html", "htm"]:
+            return "html"
+        elif lang_lower in ["android", "android-shell"]:
+            return "android"
+        elif lang_lower in ["android-root", "android-su"]:
+            return "android-root"
         return lang_lower
 
 
