@@ -20,15 +20,12 @@ An AI-powered command execution agent for NetHunter and MacOS. Control your Andr
 
 ```bash
 # Clone and install
-git clone https://github.com/yourusername/Mobile-Agent.git
+git clone https://github.com/wyatt727/Mobile-Agent.git
 cd Mobile-Agent
 ./install-mobile.sh
 
 # Use the agent
-agent open whatsapp
-agent create a react website
-agent scan target.com
-agent take a screenshot
+agent create a simple web page
 ```
 
 ## Installation

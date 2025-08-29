@@ -3,6 +3,7 @@
 Language Executor - Handles execution of code blocks with NetHunter-specific languages
 """
 import os
+import sys
 import subprocess
 import tempfile
 import time
@@ -392,7 +393,6 @@ class LanguageExecutor:
                             subprocess.run(['firefox', url], check=False)
                     else:
                         # Windows fallback - use os.startfile instead of shell
-                        import os
                         os.startfile(url)
                     
                     output += f"✓ Browser launched locally\n"
