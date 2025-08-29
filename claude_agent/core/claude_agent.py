@@ -477,12 +477,14 @@ class ClaudeAgent:
         self,
         code: str,
         result: ExecutionResult,
-        language: str
+        language: str,
+        error_file_path: Optional[str] = None
     ) -> str:
-        """Build prompt to fix failed code."""
+        """Build prompt to fix failed code with optional error history context."""
         error_output = result.error or result.output or "Unknown error"
         
-        return f"""The following {language} code failed to execute correctly:
+        # Build base prompt
+        prompt = f"""The following {language} code failed to execute correctly:
 
 ```{language}
 {code}
@@ -493,9 +495,27 @@ Error output:
 {error_output}
 ```
 
-Return code: {result.return_code}
+Return code: {result.return_code}"""
+
+        # Add error history reference if available
+        if error_file_path:
+            prompt += f"""
+
+IMPORTANT: For complete context of all previous attempts and detailed error information, please read the error history file at: {error_file_path}
+
+This file contains:
+- All previous execution attempts with full output
+- Original user request context  
+- Previous fix attempts and responses
+- Detailed execution timing and return codes
+
+Please examine this file to understand what has already been tried and why those approaches failed, then provide a more effective solution."""
+
+        prompt += f"""
 
 Please analyze the error and provide a fixed version of the code. Return ONLY the corrected code in a single {language} code block, without any explanation."""
+        
+        return prompt
     
     def clear_conversation(self, keep_system: bool = True):
         """
