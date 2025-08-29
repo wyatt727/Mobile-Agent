@@ -203,7 +203,8 @@ try:
     
     # Then show execution results if any
     if results:
-        print("\\n" + "="*60)
+        print("")
+        print("="*60)
         print("EXECUTION OUTPUT:")
         print("="*60)
         
