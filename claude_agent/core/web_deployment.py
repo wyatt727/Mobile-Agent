@@ -162,15 +162,26 @@ class WebDeploymentManager:
         port = self._find_available_port()
         
         try:
+            # Preserve audio environment variables
+            env = os.environ.copy()
+            # Ensure PULSE_SERVER is passed for audio connectivity
+            if 'PULSE_SERVER' not in env:
+                env['PULSE_SERVER'] = 'tcp:127.0.0.1:4713'
+            
+            # Log file for debugging without stdout competition
+            log_file = deploy_dir / 'server.log'
+            log_handle = open(log_file, 'w')
+            
             # Start server in background with process isolation
             # On macOS, use start_new_session OR preexec_fn, not both
             if sys.platform == 'darwin':
                 server_process = subprocess.Popen(
                     ['python3', '-m', 'http.server', str(port)],
                     cwd=deploy_dir,
-                    stdout=subprocess.DEVNULL,  # Avoid stdout competition
-                    stderr=subprocess.DEVNULL,  # Avoid stderr competition
+                    stdout=log_handle,  # Log instead of DEVNULL
+                    stderr=subprocess.STDOUT,  # Combine stderr with stdout
                     text=True,
+                    env=env,  # Pass environment with PULSE_SERVER
                     start_new_session=True  # Create new process group
                 )
             else:
@@ -178,9 +189,10 @@ class WebDeploymentManager:
                 server_process = subprocess.Popen(
                     ['python3', '-m', 'http.server', str(port)],
                     cwd=deploy_dir,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
+                    stdout=log_handle,
+                    stderr=subprocess.STDOUT,
                     text=True,
+                    env=env,  # Pass environment with PULSE_SERVER
                     start_new_session=True,
                     preexec_fn=os.setsid
                 )
@@ -306,15 +318,26 @@ if __name__ == '__main__':
                 capture_output=True
             )
             
+            # Preserve audio environment variables
+            env = os.environ.copy()
+            # Ensure PULSE_SERVER is passed for audio connectivity
+            if 'PULSE_SERVER' not in env:
+                env['PULSE_SERVER'] = 'tcp:127.0.0.1:4713'
+            
+            # Log file for debugging without stdout competition
+            log_file = deploy_dir / 'flask.log'
+            log_handle = open(log_file, 'w')
+            
             # Start Flask server with process isolation
             # On macOS, use start_new_session OR preexec_fn, not both
             if sys.platform == 'darwin':
                 server_process = subprocess.Popen(
                     ['python3', 'app.py'],
                     cwd=deploy_dir,
-                    stdout=subprocess.DEVNULL,  # Avoid stdout competition
-                    stderr=subprocess.DEVNULL,  # Avoid stderr competition
+                    stdout=log_handle,  # Log instead of DEVNULL
+                    stderr=subprocess.STDOUT,  # Combine stderr with stdout
                     text=True,
+                    env=env,  # Pass environment with PULSE_SERVER
                     start_new_session=True  # Create new process group
                 )
             else:
@@ -322,9 +345,10 @@ if __name__ == '__main__':
                 server_process = subprocess.Popen(
                     ['python3', 'app.py'],
                     cwd=deploy_dir,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
+                    stdout=log_handle,
+                    stderr=subprocess.STDOUT,
                     text=True,
+                    env=env,  # Pass environment with PULSE_SERVER
                     start_new_session=True,
                     preexec_fn=os.setsid
                 )
