@@ -5,10 +5,9 @@ Claude Agent - Main orchestrator for Claude Code interactions and code execution
 import re
 import logging
 import tempfile
-import json
 import time
 from pathlib import Path
-from typing import List, Tuple, Optional, Dict, Any
+from typing import List, Tuple, Optional
 from enum import Enum
 from datetime import datetime
 
@@ -479,42 +478,73 @@ class ClaudeAgent:
         code: str,
         result: ExecutionResult,
         language: str,
-        error_file_path: Optional[str] = None
+        error_file_path: Optional[str] = None,
+        original_request: str = ""
     ) -> str:
-        """Build prompt to fix failed code with optional error history context."""
+        """Build prompt to fix failed code with full context."""
         error_output = result.error or result.output or "Unknown error"
         
-        # Build base prompt
-        prompt = f"""The following {language} code failed to execute correctly:
+        # Determine if this is a web development request
+        is_web_request = any(keyword in original_request.lower() for keyword in [
+            'website', 'web', 'html', 'react', 'vue', 'frontend', 'page', 'site',
+            'browser', 'deploy', 'server', 'css', 'javascript'
+        ])
+        
+        # Start with system context references
+        prompt = """IMPORTANT CONTEXT: You are operating within a NetHunter chroot environment.
 
-```{language}
-{code}
-```
+Please read and follow these system prompts for proper execution:
+@claude_agent/prompt/nethunter-system-prompt-v3.md"""
+        
+        if is_web_request:
+            prompt += """
+@claude_agent/prompt/WebDev_Claude.md"""
+        
+        # Add the original user request to maintain focus on the goal
+        prompt += f"""
 
-Error output:
-```
+=== ORIGINAL USER REQUEST ===
+{original_request}
+
+=== WHAT WAS ATTEMPTED ===
+The following {language} code was generated and executed:
+
+    {code.replace(chr(10), chr(10) + '    ')}
+
+=== COMPLETE ERROR OUTPUT ===
+The execution failed with the following output:
+
+STDOUT:
+{result.output if result.output else '(no stdout output)'}
+
+STDERR:
 {error_output}
-```
 
-Return code: {result.return_code}"""
+Return code: {result.return_code}
+Execution time: {result.execution_time}s"""
 
         # Add error history reference if available
         if error_file_path:
             prompt += f"""
 
-IMPORTANT: For complete context of all previous attempts and detailed error information, please read the error history file at: {error_file_path}
+=== ERROR HISTORY AVAILABLE ===
+IMPORTANT: For complete context of all previous attempts, please read: @{error_file_path}
 
 This file contains:
 - All previous execution attempts with full output
-- Original user request context  
-- Previous fix attempts and responses
-- Detailed execution timing and return codes
-
-Please examine this file to understand what has already been tried and why those approaches failed, then provide a more effective solution."""
+- Previous fix attempts and Claude's responses
+- Detailed execution timing for each attempt
+- Progressive context showing what has been tried"""
 
         prompt += f"""
 
-Please analyze the error and provide a fixed version of the code. Return ONLY the corrected code in a single {language} code block, without any explanation."""
+=== YOUR TASK ===
+Please analyze the error and provide a solution. You may either:
+1. Fix the existing code if the approach is sound
+2. Try a completely different approach to achieve the user's goal
+
+Remember to follow the NetHunter system prompt rules.
+Return your solution as executable {language} code block(s), following the language identifier rules from the system prompt."""
         
         return prompt
     
