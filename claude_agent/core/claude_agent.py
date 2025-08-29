@@ -4,8 +4,13 @@ Claude Agent - Main orchestrator for Claude Code interactions and code execution
 """
 import re
 import logging
+import tempfile
+import json
+import time
+from pathlib import Path
 from typing import List, Tuple, Optional, Dict, Any
 from enum import Enum
+from datetime import datetime
 
 from claude_agent.config import AgentConfig
 from claude_agent.providers.claude_provider import LLMProvider, ClaudeCodeProvider, FallbackProvider
